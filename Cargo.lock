@@ -314,6 +314,7 @@ name = "bevy-game-puzzle"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "rand",
 ]
 
 [[package]]
