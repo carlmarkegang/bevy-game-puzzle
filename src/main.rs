@@ -18,10 +18,12 @@ fn main() {
         .add_systems(
             FixedUpdate,
             (
+                setupbrick::time_still_check,
                 setupbrick::brick_movements,
                 //setupbrick::collision_check_brick,
                 setupbrick::collision_check_brick,
-                setupbrick::set_pos_compare_brick
+                setupbrick::set_pos_compare_brick,
+                
             )
                 .chain(),
         )
