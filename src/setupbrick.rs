@@ -12,6 +12,7 @@ pub struct Brick {
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
     pub to_delete: i32,
+    pub touching_array: Vec<i32>,
 }
 
 #[derive(Component)]
@@ -74,6 +75,7 @@ pub fn setup_brick(
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
                 to_delete: 0,
+                touching_array: vec![],
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
@@ -198,7 +200,6 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-
 /// graph traversal ??
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
@@ -221,12 +222,15 @@ pub fn check_touching(
             let obstacle_radius = obstacle.size / 1.5;
 
             if distance < brick_radius + obstacle_radius {
-                //if brick.time_still >= 500. {
-                if brick.brick_type == obstacle.brick_type {
-                    touching_amount += 1;
-                    //println!("touching_amount: {} id: {}", touching_amount, brick.id);
+                if brick.time_still >= 500. {
+                    if brick.brick_type == obstacle.brick_type {
+                        if !brick.touching_array.contains(&obstacle.id) {
+                            brick.touching_array.push(obstacle.id); 
+                        }
+                        // Reset
+                        //brick.array = Vec::new();
+                    }
                 }
-                // }
             }
         }
 
@@ -236,20 +240,31 @@ pub fn check_touching(
     }
 }
 
-
-
 pub fn delete_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    if generate_random_int(0..500) == 0 {
+    let mut array_to_remove: Vec<i32> = Vec::new();
+
+    if generate_random_int(0..100) == 0 {
+        array_to_remove = Vec::new();
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            println!("run id: {}", brick.id);
-            if brick.to_delete == 1 {
+            if brick.touching_array.len() >= 3 {
+                println!("add to remove: {:?}", brick.touching_array);
+                array_to_remove.extend(&brick.touching_array);
+            }
+        }
+
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            if array_to_remove.contains(&brick.id) {
+                println!("remove: {:?}", brick.id);
                 brick_transform.translation.x = generate_random_int(-100..100) as f32;
                 brick_transform.translation.y = 200.0;
                 brick.time_still = 0.0;
                 brick.to_delete = 0;
+                brick.vel_y = 0.0;
+                brick.vel_x = 0.0;
+                brick.touching_array = Vec::new();
             }
         }
     }
