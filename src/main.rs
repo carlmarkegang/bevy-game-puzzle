@@ -20,7 +20,7 @@ fn main() {
             (
                 setupbrick::brick_movements,
                 //setupbrick::collision_check_brick,
-                setupbrick::pos_check_brick,
+                setupbrick::collision_check_brick,
                 setupbrick::set_pos_compare_brick
             )
                 .chain(),
