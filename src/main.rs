@@ -14,14 +14,15 @@ fn main() {
                 setupbrick::setup_brick,
             ),
         )
+        .add_systems(Update, (setupcamera::fit_canvas, cursor_events))
         .add_systems(
-            Update,
+            FixedUpdate,
             (
-                setupcamera::fit_canvas,
-                cursor_events,
-            ),
+                setupbrick::brick_movements,
+                setupbrick::collision_check_brick,
+            )
+                .chain(),
         )
-        .add_systems(FixedUpdate, (setupbrick::brick_movements,).chain())
         .run();
 }
 
