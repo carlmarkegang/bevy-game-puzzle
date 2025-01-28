@@ -3,6 +3,7 @@ use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Brick {
+    pub id: i32,
     pub vel_x: f32,
     pub vel_y: f32,
     pub size: f32,
@@ -27,6 +28,7 @@ pub fn setup_brick(
             ))
             .with_scale(Vec2::splat(brick_size).extend(1.)),
             Brick {
+                id: _i,
                 vel_x: 0.0,
                 vel_y: 0.0,
                 size: brick_size,
@@ -52,7 +54,6 @@ pub fn brick_controls(mut query: Query<&mut Brick>) {
         if generate_rand == 3 {
             brick.vel_x = 0.0;
         }
-
     }
 }
 
@@ -70,10 +71,29 @@ pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
+pub fn pos_check_brick(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
+    for (mut brick_transform, brick) in query_brick.iter_mut() {
+        for (obstacle_transform, _obstacle) in query_brick.iter() {
+            if brick_transform.translation.x == obstacle_transform.translation.x {
+                brick_modify.push(brick);
+            }
+        }
+    }
+
+    for (mut brick_transform, brick) in query_brick.iter_mut() {
+        for brick_mod in brick_modify {
+            if brick_mod.id == brick.id {
+                brick_transform.translation.x += 10.0;
+            }
+        }
+    }
+}
+
+/*
 pub fn collision_check_brick(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     for (obstacle_transform, obstacle) in query_brick.iter_mut() {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        
+
             if std::ptr::eq(&*brick, &*obstacle) {
                 continue;
             }
@@ -96,3 +116,4 @@ pub fn collision_check_brick(mut query_brick: Query<(&mut Transform, &mut Brick)
         }
     }
 }
+ */

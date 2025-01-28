@@ -19,7 +19,8 @@ fn main() {
             FixedUpdate,
             (
                 setupbrick::brick_movements,
-                setupbrick::collision_check_brick,
+                //setupbrick::collision_check_brick,
+                setupbrick::pos_check_brick
             )
                 .chain(),
         )
