@@ -97,6 +97,7 @@ pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
     let max_speed = -2.0;
     for (mut transform, mut brick) in brick_query.iter_mut() {
         if brick.time_still >= MAX_TIME_STILL {
+            brick.vel_y = 0.0;
             continue;
         }
 
