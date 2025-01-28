@@ -108,6 +108,13 @@ pub fn collision_check_brick(
             if obstacle.id == brick.id {
                 continue;
             }
+
+            if brick.time_still >= 500. {
+                brick_transform.translation.x = generate_random_int(-100..100) as f32;
+                brick_transform.translation.y = 200.0;
+                brick.time_still = 0.0;
+            }
+
             if brick.time_still >= MAX_TIME_STILL {
                 //println!("time still: {}", brick.time_still);
                 brick.vel_y = 0.0;
@@ -162,7 +169,7 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
         {
             brick.time_still += 1.0;
         } else {
-            println!("time still: {} id: {}", brick.time_still, brick.id);
+            //println!("time still: {} id: {}", brick.time_still, brick.id);
             brick.time_still = 0.0;
         }
         brick.time_still_move_x = rounded_x;
