@@ -4,18 +4,23 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Brick {
     pub id: i32,
+    pub brick_type: i32,
     pub vel_x: f32,
     pub vel_y: f32,
     pub size: f32,
     pub time_still: f32,
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
+    pub to_delete: i32,
 }
+
+
 
 #[derive(Component)]
 pub struct BrickCompare {
     pub id: i32,
     pub size: f32,
+    pub brick_type: i32,
 }
 
 const MAX_TIME_STILL: f32 = 100.;
@@ -29,15 +34,37 @@ pub fn setup_brick(
     // Brick
     let brick_size: f32 = 20.;
     for _i in 0..30 {
-        let random_color_r = generate_random_int(0..100) as f32 / 100.0;
-        let random_color_b = generate_random_int(0..100) as f32 / 100.0;
-        let random_color_g = generate_random_int(0..100) as f32 / 100.0;
+
+        let random_brick_type = generate_random_int(1..4);
+        let mut color_r = generate_random_int(0..100) as f32 / 100.0;
+        let mut color_g = generate_random_int(0..100) as f32 / 100.0;
+        let mut color_b = generate_random_int(0..100) as f32 / 100.0;
+
+        if random_brick_type == 1 {
+            color_r = 1.0;
+            color_g = 0.2;
+            color_b = 0.2;
+        }
+
+        if random_brick_type == 2 {
+            color_r = 0.2;
+            color_g = 1.0;
+            color_b = 0.2;
+        }
+
+        if random_brick_type == 3 {
+            color_r = 0.2;
+            color_g = 0.2;
+            color_b = 1.0;
+        }
+
+
         commands.spawn((
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(
-                random_color_r,
-                random_color_g,
-                random_color_b,
+                color_r,
+                color_g,
+                color_b,
             ))),
             Transform::from_translation(Vec3::new(
                 generate_random_int(-50..50) as f32,
@@ -47,12 +74,14 @@ pub fn setup_brick(
             .with_scale(Vec2::splat(brick_size).extend(1.)),
             Brick {
                 id: _i,
+                brick_type: random_brick_type,
                 vel_x: 0.0,
                 vel_y: 0.0,
                 size: brick_size,
                 time_still: 0.0,
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
+                to_delete: 0,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
@@ -64,6 +93,7 @@ pub fn setup_brick(
                 .with_scale(Vec2::splat(0.0).extend(1.)),
             BrickCompare {
                 id: _i,
+                brick_type: random_brick_type,
                 size: brick_size,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
@@ -109,11 +139,11 @@ pub fn collision_check_brick(
                 continue;
             }
 
-            if brick.time_still >= 500. {
-                brick_transform.translation.x = generate_random_int(-100..100) as f32;
-                brick_transform.translation.y = 200.0;
-                brick.time_still = 0.0;
-            }
+            //if brick.time_still >= 500. {
+            //    brick_transform.translation.x = generate_random_int(-100..100) as f32;
+            //    brick_transform.translation.y = 200.0;
+            //    brick.time_still = 0.0;
+            //}
 
             if brick.time_still >= MAX_TIME_STILL {
                 //println!("time still: {}", brick.time_still);
@@ -174,5 +204,51 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
         }
         brick.time_still_move_x = rounded_x;
         brick.time_still_move_y = rounded_y;
+    }
+}
+
+pub fn check_touching(
+    mut query_brick: Query<(&mut Transform, &mut Brick)>,
+    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
+) {
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        let mut touching_amount = 0;
+        brick.to_delete = 0;
+
+        for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+            if obstacle.id == brick.id {
+                continue;
+            }
+
+
+            let brick_position = brick_transform.translation;
+            let obstacle_position = obstacle_transform.translation;
+
+            let distance = brick_position.distance(obstacle_position);
+            let brick_radius = brick.size / 2.;
+            let obstacle_radius = obstacle.size / 2.;
+
+            if distance < brick_radius + obstacle_radius {
+               if brick.time_still >= 500. {
+                if brick.brick_type == obstacle.brick_type {
+                    touching_amount += 1;
+                }
+                }
+
+
+            }
+        }
+
+        if touching_amount >= 2 {
+            brick.to_delete = 1;
+        }
+    }
+
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        if brick.to_delete == 1 {
+            brick_transform.translation.x = generate_random_int(-100..100) as f32;
+            brick_transform.translation.y = 200.0;
+            brick.time_still = 0.0;
+        }
     }
 }

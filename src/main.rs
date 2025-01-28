@@ -22,6 +22,7 @@ fn main() {
                 setupbrick::collision_check_brick,
                 setupbrick::set_pos_compare_brick,
                 setupbrick::brick_movements,
+                setupbrick::check_touching
                 
             )
                 .chain(),
