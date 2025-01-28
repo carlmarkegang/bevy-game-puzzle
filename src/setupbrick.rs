@@ -198,6 +198,8 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
+
+/// graph traversal ??
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
@@ -221,13 +223,6 @@ pub fn check_touching(
             if distance < brick_radius + obstacle_radius {
                 //if brick.time_still >= 500. {
                 if brick.brick_type == obstacle.brick_type {
-                    let mut test123: Query<'_, '_, (&mut Transform, &mut Brick)> = query_brick;
-                    let mut test1234: Query<'_, '_, (&mut Transform, &mut BrickCompare), Without<Brick>> = query_brick_compare;
-                    check_touching_with_id(
-                        test123,
-                         test1234,
-                        brick.id
-                    );
                     touching_amount += 1;
                     //println!("touching_amount: {} id: {}", touching_amount, brick.id);
                 }
@@ -241,30 +236,7 @@ pub fn check_touching(
     }
 }
 
-pub fn check_touching_with_id(
-    mut query_brick: Query<(&mut Transform, &mut Brick)>,
-    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
-    current_id: i32,
-) -> i32 {
-    let mut return_val = 0;
-    let brick_position = brick_transform;
-    let obstacle_position = obstacle_transform;
 
-    let distance = brick_position.distance(obstacle_position);
-    let brick_radius = brick.size / 1.5;
-    let obstacle_radius = obstacle.size / 1.5;
-
-    if distance < brick_radius + obstacle_radius {
-        //if brick.time_still >= 500. {
-        if brick.brick_type == obstacle.brick_type {
-            return_val = 1;
-            //println!("touching_amount: {} id: {}", touching_amount, brick.id);
-        }
-        // }
-    }
-
-    return return_val as i32
-}
 
 pub fn delete_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
