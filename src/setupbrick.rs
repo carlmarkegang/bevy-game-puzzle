@@ -9,6 +9,15 @@ pub struct Brick {
     pub size: f32,
 }
 
+#[derive(Component)]
+pub struct BrickCompare {
+    pub id: i32,
+    pub vel_x: f32,
+    pub vel_y: f32,
+    pub size: f32,
+}
+
+
 pub fn setup_brick(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -35,11 +44,29 @@ pub fn setup_brick(
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
+
+
+        commands.spawn((
+            Mesh2d(meshes.add(Circle::default())),
+            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
+            Transform::from_translation(Vec3::new(
+                0. as f32,
+                generate_random_int(0..500) as f32,
+                20.0,
+            ))
+            .with_scale(Vec2::splat(5.0).extend(1.)),
+            BrickCompare {
+                id: _i,
+                vel_x: 0.0,
+                vel_y: 0.0,
+                size: brick_size,
+            },
+            setupcamera::PIXEL_PERFECT_LAYERS,
+        ));
     }
 }
 
 pub fn brick_controls(mut query: Query<&mut Brick>) {
-    let jump_power = 3.0;
     let speed = 1.0;
     for mut brick in query.iter_mut() {
         let generate_rand = generate_random_int(1..200);
@@ -71,19 +98,21 @@ pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-pub fn pos_check_brick(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
+pub fn pos_check_brick(
+    mut query_brick: Query<(&mut Transform, &mut Brick)>,
+    query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>
+) {
     for (mut brick_transform, brick) in query_brick.iter_mut() {
-        for (obstacle_transform, _obstacle) in query_brick.iter() {
-            if brick_transform.translation.x == obstacle_transform.translation.x {
-                brick_modify.push(brick);
-            }
-        }
-    }
+        for (brick_transform_compare, brick_compare) in query_brick_compare.iter() {
 
-    for (mut brick_transform, brick) in query_brick.iter_mut() {
-        for brick_mod in brick_modify {
-            if brick_mod.id == brick.id {
-                brick_transform.translation.x += 10.0;
+            //println!("Brick ID: {}, Obstacle ID: {}", brick.id, brick_compare.id);
+
+            if brick_compare.id == brick.id {
+                continue;
+            }
+
+            if brick_transform.translation.x == brick_transform_compare.translation.x {
+                brick_transform.translation.x += 0.01;
             }
         }
     }
@@ -117,3 +146,18 @@ pub fn collision_check_brick(mut query_brick: Query<(&mut Transform, &mut Brick)
     }
 }
  */
+
+
+ pub fn set_pos_compare_brick(
+    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare)>,
+    query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompare>>
+) {
+    for (brick_transform, brick) in query_brick.iter() {
+        for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
+            if brick_compare.id == brick.id {
+                brick_transform_compare.translation = brick_transform.translation;
+            }
+
+        }
+    }
+}
