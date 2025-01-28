@@ -18,6 +18,8 @@ pub struct BrickCompare {
     pub size: f32,
 }
 
+const MAX_TIME_STILL: f32 = 100.;
+
 pub fn setup_brick(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -26,7 +28,7 @@ pub fn setup_brick(
 ) {
     // Brick
     let brick_size: f32 = 20.;
-    for _i in 0..50 {
+    for _i in 0..30 {
         let random_color_r = generate_random_int(0..100) as f32 / 100.0;
         let random_color_b = generate_random_int(0..100) as f32 / 100.0;
         let random_color_g = generate_random_int(0..100) as f32 / 100.0;
@@ -39,7 +41,7 @@ pub fn setup_brick(
             ))),
             Transform::from_translation(Vec3::new(
                 generate_random_int(-50..50) as f32,
-                _i as f32 * 100.0,
+                _i as f32 * 200.0,
                 10.0,
             ))
             .with_scale(Vec2::splat(brick_size).extend(1.)),
@@ -69,21 +71,20 @@ pub fn setup_brick(
     }
 }
 
-
 pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
     let max_speed = -2.0;
     for (mut transform, mut brick) in brick_query.iter_mut() {
-        if brick.time_still > 50. {
+        if brick.time_still >= MAX_TIME_STILL {
             continue;
         }
 
         transform.translation.x += brick.vel_x;
-   
-        if transform.translation.y >= -50.0 {
-            if brick.vel_y > max_speed {
-                brick.vel_y -= 0.1;
-            }
-        } else {
+
+        if brick.vel_y > max_speed {
+            brick.vel_y -= 0.1;
+        }
+
+        if transform.translation.y <= -50.0 {
             transform.translation.y = -50.0;
         }
         transform.translation.y += brick.vel_y;
@@ -98,7 +99,6 @@ pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-
 pub fn collision_check_brick(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
@@ -108,7 +108,7 @@ pub fn collision_check_brick(
             if obstacle.id == brick.id {
                 continue;
             }
-            if brick.time_still > 50. {
+            if brick.time_still >= MAX_TIME_STILL {
                 //println!("time still: {}", brick.time_still);
                 brick.vel_y = 0.0;
                 brick.vel_x = 0.0;
@@ -130,7 +130,7 @@ pub fn collision_check_brick(
 
                 brick_transform.translation.x += shift.x;
                 brick_transform.translation.y += shift.y;
-                brick.vel_y = 0.0;
+                brick.vel_y = -1.0;
             }
         }
     }
@@ -151,14 +151,21 @@ pub fn set_pos_compare_brick(
 
 pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        if brick_transform.translation.x == brick.time_still_move_x &&  brick_transform.translation.y == brick.time_still_move_y {
-                brick.time_still += 1.0;
+        //let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
+        //let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
+
+        let rounded_x = (brick_transform.translation.x).round();
+        let rounded_y = (brick_transform.translation.y).round();
+
+        if rounded_x == brick.time_still_move_x
+            && rounded_y == brick.time_still_move_y
+        {
+            brick.time_still += 1.0;
         } else {
+            println!("time still: {} id: {}", brick.time_still, brick.id);
             brick.time_still = 0.0;
         }
-        brick.time_still_move_x = brick_transform.translation.x;
-        brick.time_still_move_y = brick_transform.translation.y;
+        brick.time_still_move_x = rounded_x;
+        brick.time_still_move_y = rounded_y;
     }
-    
 }
-
