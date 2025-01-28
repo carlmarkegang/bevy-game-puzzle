@@ -215,14 +215,15 @@ pub fn check_touching(
             let obstacle_position = obstacle_transform.translation;
 
             let distance = brick_position.distance(obstacle_position);
-            let brick_radius = brick.size / 1.;
-            let obstacle_radius = obstacle.size / 1.;
+            let brick_radius = brick.size / 1.5;
+            let obstacle_radius = obstacle.size / 1.5;
 
             if distance < brick_radius + obstacle_radius {
                 //if brick.time_still >= 500. {
                 if brick.brick_type == obstacle.brick_type {
-                    println!("touching_amount: {} id: {}", touching_amount, brick.id);
+                    
                     touching_amount += 1;
+                    //println!("touching_amount: {} id: {}", touching_amount, brick.id);
                 }
                 // }
             }
@@ -232,14 +233,27 @@ pub fn check_touching(
             brick.to_delete = 1;
         }
     }
-       
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        if brick.to_delete == 1 {
-            brick_transform.translation.x = generate_random_int(-100..100) as f32;
-            brick_transform.translation.y = 200.0;
-            brick.time_still = 0.0;
-            brick.to_delete = 0;
+}
+
+
+
+
+pub fn delete_touching(
+    mut query_brick: Query<(&mut Transform, &mut Brick)>,
+    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
+) {
+        if generate_random_int(0..500) == 0{
+            
+            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+                println!("run id: {}", brick.id);
+                if brick.to_delete == 1 {
+                    brick_transform.translation.x = generate_random_int(-100..100) as f32;
+                    brick_transform.translation.y = 200.0;
+                    brick.time_still = 0.0;
+                    brick.to_delete = 0;
+                }
+            }
         }
-    }
+    
 }
