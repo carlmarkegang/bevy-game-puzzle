@@ -258,9 +258,12 @@ pub fn delete_touching(
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
             if array_to_remove.contains(&brick.id) {
                 println!("remove: {:?}", brick.id);
-                brick_transform.translation.x = generate_random_int(-100..100) as f32;
-                brick_transform.translation.y = 200.0;
+                brick_transform.translation.x = generate_random_int(-200..200) as f32;
+                brick_transform.translation.y = generate_random_int(500..1000) as f32;
+                brick.time_still_move_x = brick_transform.translation.x ;
+                brick.time_still_move_y = brick_transform.translation.y;
                 brick.time_still = 0.0;
+                brick.brick_type = generate_random_int(1..3);
                 brick.to_delete = 0;
                 brick.vel_y = 0.0;
                 brick.vel_x = 0.0;
