@@ -21,6 +21,12 @@ pub struct BrickCompare {
     pub brick_type: i32,
 }
 
+#[derive(Component)]
+pub struct BrickCompareTime {
+    pub id: i32,
+    pub time_still: f32,
+}
+
 const MAX_TIME_STILL: f32 = 100.;
 const MAX_BRICKS: i32 = 20;
 
@@ -91,6 +97,22 @@ pub fn setup_brick(
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
+
+        commands.spawn((
+            Mesh2d(meshes.add(Rectangle::default())),
+            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
+            Transform::from_xyz(
+                0.,
+                100. - (_i + 2) as f32,
+                2.,
+            )
+            .with_scale(Vec3::new(200.0, 2.0, 20.0)),
+            BrickCompareTime{
+                id: _i,
+                time_still: 0.0,
+            },
+            setupcamera::PIXEL_PERFECT_LAYERS,
+        ));
     }
 }
 
@@ -133,14 +155,7 @@ pub fn collision_check_brick(
                 continue;
             }
 
-            //if brick.time_still >= 500. {
-            //    brick_transform.translation.x = generate_random_int(-100..100) as f32;
-            //    brick_transform.translation.y = 200.0;
-            //    brick.time_still = 0.0;
-            //}
-
             if brick.time_still >= MAX_TIME_STILL {
-                //println!("time still: {}", brick.time_still);
                 brick.vel_y = 0.0;
                 brick.vel_x = 0.0;
                 brick_transform.translation.x = brick.time_still_move_x;
@@ -175,6 +190,20 @@ pub fn set_pos_compare_brick(
         for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
             if brick_compare.id == brick.id {
                 brick_transform_compare.translation = brick_transform.translation;
+            }
+        }
+    }
+}
+
+pub fn set_time_compare_brick(
+    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompareTime)>,
+    query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompareTime>>,
+) {
+    for (brick_transform, brick) in query_brick.iter() {
+        for (mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
+            if brick_compare.id == brick.id {
+                brick_compare.time_still = brick.time_still;
+                brick_transform_compare.scale = Vec3::new(brick_compare.time_still - 3000.0, 2.0, 20.0); 
             }
         }
     }
@@ -215,14 +244,15 @@ pub fn check_touching(
         touching_array_depth_1 = Vec::new();
         touching_array_depth_2 = Vec::new();
         touching_array_depth_3 = Vec::new();
+        touching_array_depth_4 = Vec::new();
 
         let mut reset_run = false;
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.time_still > 6000. {
+            if brick.time_still > 3000. {
                 reset_run = true;
             }
 
-            if brick.time_still < 600. && reset_run == false {
+            if brick.time_still < MAX_TIME_STILL * 2. && reset_run == false {
                 return;
             }
         }
@@ -245,8 +275,8 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.9;
-                let obstacle_radius = obstacle.size / 1.9;
+                let brick_radius = brick.size / 2.0;
+                let obstacle_radius = obstacle.size / 2.0;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
@@ -279,8 +309,8 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.9;
-                let obstacle_radius = obstacle.size / 1.9;
+                let brick_radius = brick.size / 2.0;
+                let obstacle_radius = obstacle.size / 2.0;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
@@ -314,8 +344,8 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.9;
-                let obstacle_radius = obstacle.size / 1.9;
+                let brick_radius = brick.size / 2.0;
+                let obstacle_radius = obstacle.size / 2.0;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
@@ -330,11 +360,52 @@ pub fn check_touching(
             }
         }
 
+        // Depth 4
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+                if obstacle.id == brick.id {
+                    continue;
+                }
+
+                if !touching_array_depth_1.contains(&brick.id) {
+                    continue;
+                }
+
+                if !touching_array_depth_2.contains(&brick.id) {
+                    continue;
+                }
+
+                if !touching_array_depth_3.contains(&brick.id) {
+                    continue;
+                }
+
+                let brick_position = brick_transform.translation;
+                let obstacle_position = obstacle_transform.translation;
+
+                let distance = brick_position.distance(obstacle_position);
+                let brick_radius = brick.size / 2.0;
+                let obstacle_radius = obstacle.size / 2.0;
+
+                if distance < brick_radius + obstacle_radius {
+                    if brick.brick_type == obstacle.brick_type {
+                        if !touching_array_depth_1.contains(&obstacle.id)
+                        || !touching_array_depth_2.contains(&obstacle.id)
+                        || !touching_array_depth_3.contains(&obstacle.id)
+                        || !touching_array_depth_4.contains(&obstacle.id)
+                    {
+                            touching_array_depth_4.push(obstacle.id);
+                        }
+                    }
+                }
+            }
+        }
+
         if touching_array_depth_3.len() >= 1 {
             for (mut brick_transform, mut brick) in query_brick.iter_mut() {
                 if touching_array_depth_1.contains(&brick.id)
                     || touching_array_depth_2.contains(&brick.id)
                     || touching_array_depth_3.contains(&brick.id)
+                    || touching_array_depth_4.contains(&brick.id)
                 {
                     brick.to_delete = 1;
                 }
