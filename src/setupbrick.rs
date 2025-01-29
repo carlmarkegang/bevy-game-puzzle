@@ -12,7 +12,6 @@ pub struct Brick {
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
     pub to_delete: i32,
-    pub touching_array: Vec<i32>,
 }
 
 #[derive(Component)]
@@ -76,7 +75,6 @@ pub fn setup_brick(
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
                 to_delete: 0,
-                touching_array: vec![],
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
@@ -218,9 +216,28 @@ pub fn check_touching(
         touching_array_depth_2 = Vec::new();
         touching_array_depth_3 = Vec::new();
 
+        let mut reset_run = false;
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.time_still < 600. {
+            if brick.time_still > 10000. {
+                reset_run = true;
+            }
+
+            if brick.time_still < 600. && reset_run == false {
                 return;
+            }
+        }
+
+        if reset_run == true {
+            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+                brick_transform.translation.x = generate_random_int(-200..200) as f32;
+                brick_transform.translation.y = generate_random_int(500..1000) as f32;
+                brick.time_still_move_x = brick_transform.translation.x;
+                brick.time_still_move_y = brick_transform.translation.y;
+                brick.time_still = 0.0;
+                brick.brick_type = generate_random_int(1..3);
+                brick.to_delete = 0;
+                brick.vel_y = 0.0;
+                brick.vel_x = 0.0;
             }
         }
 
@@ -235,8 +252,8 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.8;
-                let obstacle_radius = obstacle.size / 1.8;
+                let brick_radius = brick.size / 1.9;
+                let obstacle_radius = obstacle.size / 1.9;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
@@ -269,8 +286,8 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.8;
-                let obstacle_radius = obstacle.size / 1.8;
+                let brick_radius = brick.size / 1.9;
+                let obstacle_radius = obstacle.size / 1.9;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
@@ -304,12 +321,15 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.8;
-                let obstacle_radius = obstacle.size / 1.8;
+                let brick_radius = brick.size / 1.9;
+                let obstacle_radius = obstacle.size / 1.9;
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
-                        if !touching_array_depth_3.contains(&obstacle.id) {
+                        if !touching_array_depth_1.contains(&obstacle.id)
+                        || !touching_array_depth_2.contains(&obstacle.id)
+                        || !touching_array_depth_3.contains(&obstacle.id)
+                    {
                             touching_array_depth_3.push(obstacle.id);
                         }
                     }
@@ -346,7 +366,6 @@ pub fn delete_touching(
             brick.to_delete = 0;
             brick.vel_y = 0.0;
             brick.vel_x = 0.0;
-            brick.touching_array = Vec::new();
             was_deleted = true;
         }
     }
