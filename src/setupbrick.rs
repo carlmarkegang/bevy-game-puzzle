@@ -218,7 +218,7 @@ pub fn check_touching(
 
         let mut reset_run = false;
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.time_still > 10000. {
+            if brick.time_still > 6000. {
                 reset_run = true;
             }
 
@@ -227,17 +227,10 @@ pub fn check_touching(
             }
         }
 
+        // If nothing happened for 2 minutes
         if reset_run == true {
             for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-                brick_transform.translation.x = generate_random_int(-200..200) as f32;
-                brick_transform.translation.y = generate_random_int(500..1000) as f32;
-                brick.time_still_move_x = brick_transform.translation.x;
-                brick.time_still_move_y = brick_transform.translation.y;
-                brick.time_still = 0.0;
-                brick.brick_type = generate_random_int(1..3);
-                brick.to_delete = 0;
-                brick.vel_y = 0.0;
-                brick.vel_x = 0.0;
+                brick.to_delete = 1;
             }
         }
 
@@ -357,8 +350,8 @@ pub fn delete_touching(
     let mut was_deleted = false;
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            brick_transform.translation.x = generate_random_int(-200..200) as f32;
-            brick_transform.translation.y = generate_random_int(500..1000) as f32;
+            brick_transform.translation.x = generate_random_int(-100..100) as f32;
+            brick_transform.translation.y = generate_random_int( 500..2000) as f32;
             brick.time_still_move_x = brick_transform.translation.x;
             brick.time_still_move_y = brick_transform.translation.y;
             brick.time_still = 0.0;
