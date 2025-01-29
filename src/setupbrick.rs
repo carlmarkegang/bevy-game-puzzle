@@ -23,7 +23,7 @@ pub struct BrickCompare {
 }
 
 const MAX_TIME_STILL: f32 = 100.;
-const MAX_BRICKS: f32 = 10;
+const MAX_BRICKS: i32 = 10;
 
 pub fn setup_brick(
     mut commands: Commands,
