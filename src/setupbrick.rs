@@ -233,9 +233,9 @@ pub fn check_touching(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
     let mut current_id = 0;
+    let mut to_delete_list: Vec<i32> = Vec::new();
 
     for _i in 0..MAX_BRICKS {
-        
         current_id = _i;
 
         let mut reset_run = false;
@@ -245,7 +245,7 @@ pub fn check_touching(
             }
 
             if brick.time_still < MAX_TIME_STILL * 2. && reset_run == false {
-                //return;
+                return;
             }
         }
 
@@ -256,25 +256,24 @@ pub fn check_touching(
             }
         }
 
-        // Use a HashSet to track visited bricks and a queue for BFS
-        let mut visited = HashSet::new();
-        let mut queue: VecDeque<(i32, usize)> = VecDeque::new();
-
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            let mut visited = HashSet::new();
+            let mut queue: VecDeque<i32> = VecDeque::new();
+            let mut cluster_size = 0;
+
+            // If the brick is already checked, skip
             if visited.contains(&brick.id) {
                 continue;
             }
 
-            if brick.id != current_id {
-                continue;
-            }
+            queue.push_back(brick.id);
+            visited.insert(brick.id);
 
-            // Start BFS from the current brick
-            queue.push_back((brick.id, 0)); // (brick_id, depth)
+            while let Some(current_id) = queue.pop_front() {
+                cluster_size += 1;
 
-            while let Some((current_id, depth)) = queue.pop_front() {
-                for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
-                    if obstacle.id == current_id || visited.contains(&obstacle.id) {
+                for (obstacle_transform, obstacle) in query_brick_compare.iter() {
+                    if visited.contains(&obstacle.id) {
                         continue;
                     }
 
@@ -282,29 +281,29 @@ pub fn check_touching(
                     let obstacle_position = obstacle_transform.translation;
 
                     let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 1.9;
-                    let obstacle_radius = obstacle.size / 1.9;
+                    let brick_radius = brick.size / 2.0;
+                    let obstacle_radius = obstacle.size / 2.0;
 
-                    if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type
+                    if distance < brick_radius + obstacle_radius
+                        && brick.brick_type == obstacle.brick_type
                     {
                         visited.insert(obstacle.id);
-                        queue.push_back((obstacle.id, depth + 1));
-                        println!("{:?}", visited);
+                        queue.push_back(obstacle.id);
                     }
                 }
             }
 
-        }
-
-
-        if visited.len() >= 3 {
-            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-                if visited.contains(&brick.id) {
-                    brick.to_delete = 1;
-                }
+            // If the cluster is big enough, mark all bricks in it for deletion
+            if cluster_size >= 3 {
+                to_delete_list.extend(visited);
             }
         }
-        
+    }
+
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        if to_delete_list.contains(&brick.id) {
+            brick.to_delete = 1;
+        }
     }
 }
 
