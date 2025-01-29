@@ -235,6 +235,7 @@ pub fn check_touching(
     let mut current_id = 0;
 
     for _i in 0..MAX_BRICKS {
+        
         current_id = _i;
 
         let mut reset_run = false;
@@ -244,7 +245,7 @@ pub fn check_touching(
             }
 
             if brick.time_still < MAX_TIME_STILL * 2. && reset_run == false {
-                return;
+                //return;
             }
         }
 
@@ -264,6 +265,10 @@ pub fn check_touching(
                 continue;
             }
 
+            if brick.id != current_id {
+                continue;
+            }
+
             // Start BFS from the current brick
             queue.push_back((brick.id, 0)); // (brick_id, depth)
 
@@ -277,25 +282,29 @@ pub fn check_touching(
                     let obstacle_position = obstacle_transform.translation;
 
                     let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 2.0;
-                    let obstacle_radius = obstacle.size / 2.0;
+                    let brick_radius = brick.size / 1.9;
+                    let obstacle_radius = obstacle.size / 1.9;
 
-                    if distance < brick_radius + obstacle_radius
-                        && brick.brick_type == obstacle.brick_type
+                    if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type
                     {
                         visited.insert(obstacle.id);
                         queue.push_back((obstacle.id, depth + 1));
+                        println!("{:?}", visited);
                     }
                 }
             }
+
         }
 
-        // Mark bricks for deletion if they are in the visited set
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if visited.contains(&brick.id) {
-                brick.to_delete = 1;
+
+        if visited.len() >= 3 {
+            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+                if visited.contains(&brick.id) {
+                    brick.to_delete = 1;
+                }
             }
         }
+        
     }
 }
 
