@@ -1,7 +1,7 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::{generate_random_int, setupcamera};
-use bevy::{prelude::*};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Brick {
@@ -103,13 +103,9 @@ pub fn setup_brick(
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
-            Transform::from_xyz(
-                0.,
-                100. - (_i + 2) as f32,
-                2.,
-            )
-            .with_scale(Vec3::new(200.0, 2.0, 20.0)),
-            BrickCompareTime{
+            Transform::from_xyz(0., 100. - (_i + 2) as f32, 2.)
+                .with_scale(Vec3::new(200.0, 2.0, 20.0)),
+            BrickCompareTime {
                 id: _i,
                 time_still: 0.0,
             },
@@ -205,7 +201,8 @@ pub fn set_time_compare_brick(
         for (mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
             if brick_compare.id == brick.id {
                 brick_compare.time_still = brick.time_still;
-                brick_transform_compare.scale = Vec3::new(brick_compare.time_still - 3000.0, 2.0, 20.0); 
+                brick_transform_compare.scale =
+                    Vec3::new(brick_compare.time_still - 3000.0, 2.0, 20.0);
             }
         }
     }
@@ -235,18 +232,9 @@ pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    let mut current_id = 0;
-    let mut touching_array_depth_1: Vec<i32> = Vec::new();
-    let mut touching_array_depth_2: Vec<i32> = Vec::new();
-    let mut touching_array_depth_3: Vec<i32> = Vec::new();
-    let mut touching_array_depth_4: Vec<i32> = Vec::new();
 
     for _i in 0..MAX_BRICKS {
         current_id = _i;
-        touching_array_depth_1 = Vec::new();
-        touching_array_depth_2 = Vec::new();
-        touching_array_depth_3 = Vec::new();
-        touching_array_depth_4 = Vec::new();
 
         let mut reset_run = false;
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
@@ -266,45 +254,58 @@ pub fn check_touching(
             }
         }
 
-           // Use a HashSet to track visited bricks and a queue for BFS
-    let mut visited = HashSet::new();
-    let mut queue: VecDeque<(i32, usize)> = VecDeque::new();
+        let mut connections: HashMap<i32, HashSet<i32>> = HashMap::new();
+        let mut visited = HashSet::new();
+        let mut queue: VecDeque<(i32, usize)> = VecDeque::new();
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        if visited.contains(&brick.id) {
-            continue;
-        }
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            if visited.contains(&brick.id) {
+                continue;
+            }
 
-        // Start BFS from the current brick
-        queue.push_back((brick.id, 0)); // (brick_id, depth)
+            // Start BFS from the current brick
+            queue.push_back((brick.id, 0)); // (brick_id, depth)
 
-        while let Some((current_id, depth)) = queue.pop_front() {
-            for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
-                if obstacle.id == current_id || visited.contains(&obstacle.id) {
-                    continue;
-                }
+            while let Some((current_id, depth)) = queue.pop_front() {
+                for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+                    if obstacle.id == current_id || visited.contains(&obstacle.id) {
+                        continue;
+                    }
 
-                let brick_position = brick_transform.translation;
-                let obstacle_position = obstacle_transform.translation;
+                    let brick_position = brick_transform.translation;
+                    let obstacle_position = obstacle_transform.translation;
 
-                let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 2.0;
-                let obstacle_radius = obstacle.size / 2.0;
+                    let distance = brick_position.distance(obstacle_position);
+                    let brick_radius = brick.size / 2.0;
+                    let obstacle_radius = obstacle.size / 2.0;
 
-                if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type {
-                    visited.insert(obstacle.id);
-                    queue.push_back((obstacle.id, depth + 1));
+                    if distance < brick_radius + obstacle_radius
+                        && brick.brick_type == obstacle.brick_type
+                    {
+                        // Record the connection
+                        connections
+                            .entry(current_id)
+                            .or_default()
+                            .insert(obstacle.id);
+                        connections
+                            .entry(obstacle.id)
+                            .or_default()
+                            .insert(current_id);
+
+                        visited.insert(obstacle.id);
+                        queue.push_back((obstacle.id, depth + 1));
+                    }
                 }
             }
         }
-    }
 
-    // Mark bricks for deletion if they are in the visited set
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        if visited.contains(&brick.id) {
-            brick.to_delete = 1;
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            if let Some(connected) = connections.get(&brick.id) {
+                if connected.len() >= 3 {
+                    brick.to_delete = 1;
+                }
+            }
         }
-    }
     }
 }
 
@@ -316,7 +317,7 @@ pub fn delete_touching(
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
             brick_transform.translation.x = generate_random_int(-100..100) as f32;
-            brick_transform.translation.y = generate_random_int( 500..2000) as f32;
+            brick_transform.translation.y = generate_random_int(500..2000) as f32;
             brick.time_still_move_x = brick_transform.translation.x;
             brick.time_still_move_y = brick_transform.translation.y;
             brick.time_still = 0.0;
