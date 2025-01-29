@@ -23,7 +23,7 @@ pub struct BrickCompare {
 }
 
 const MAX_TIME_STILL: f32 = 100.;
-const MAX_BRICKS: i32 = 10;
+const MAX_BRICKS: i32 = 20;
 
 pub fn setup_brick(
     mut commands: Commands,
@@ -219,7 +219,7 @@ pub fn check_touching(
         touching_array_depth_3 = Vec::new();
 
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.time_still < 500. {
+            if brick.time_still < 600. {
                 return;
             }
         }
@@ -235,16 +235,19 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.5;
-                let obstacle_radius = obstacle.size / 1.5;
+                let brick_radius = brick.size / 1.8;
+                let obstacle_radius = obstacle.size / 1.8;
 
                 if distance < brick_radius + obstacle_radius {
-                    if brick.time_still >= 500. {
-                        if brick.brick_type == obstacle.brick_type {
-                            if !touching_array_depth_1.contains(&obstacle.id) {
-                                touching_array_depth_1.push(brick.id);
-                                touching_array_depth_1.push(obstacle.id);
-                            }
+                    if brick.brick_type == obstacle.brick_type {
+                        if !touching_array_depth_1.contains(&brick.id) {
+                            touching_array_depth_1.push(brick.id);
+                        }
+                        if !touching_array_depth_1.contains(&obstacle.id)
+                            || !touching_array_depth_2.contains(&obstacle.id)
+                            || !touching_array_depth_3.contains(&obstacle.id)
+                        {
+                            touching_array_depth_1.push(obstacle.id);
                         }
                     }
                 }
@@ -266,15 +269,16 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.5;
-                let obstacle_radius = obstacle.size / 1.5;
+                let brick_radius = brick.size / 1.8;
+                let obstacle_radius = obstacle.size / 1.8;
 
                 if distance < brick_radius + obstacle_radius {
-                    if brick.time_still >= 500. {
-                        if brick.brick_type == obstacle.brick_type {
-                            if !touching_array_depth_2.contains(&obstacle.id) {
-                                touching_array_depth_2.push(obstacle.id);
-                            }
+                    if brick.brick_type == obstacle.brick_type {
+                        if !touching_array_depth_1.contains(&obstacle.id)
+                            || !touching_array_depth_2.contains(&obstacle.id)
+                            || !touching_array_depth_3.contains(&obstacle.id)
+                        {
+                            touching_array_depth_2.push(obstacle.id);
                         }
                     }
                 }
@@ -300,15 +304,13 @@ pub fn check_touching(
                 let obstacle_position = obstacle_transform.translation;
 
                 let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.5;
-                let obstacle_radius = obstacle.size / 1.5;
+                let brick_radius = brick.size / 1.8;
+                let obstacle_radius = obstacle.size / 1.8;
 
                 if distance < brick_radius + obstacle_radius {
-                    if brick.time_still >= 500. {
-                        if brick.brick_type == obstacle.brick_type {
-                            if !touching_array_depth_3.contains(&obstacle.id) {
-                                touching_array_depth_3.push(obstacle.id);
-                            }
+                    if brick.brick_type == obstacle.brick_type {
+                        if !touching_array_depth_3.contains(&obstacle.id) {
+                            touching_array_depth_3.push(obstacle.id);
                         }
                     }
                 }
@@ -332,26 +334,26 @@ pub fn delete_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    if generate_random_int(0..100) == 0 {
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.to_delete == 1 {
-                println!("remove: {:?}", brick.id);
-                brick_transform.translation.x = generate_random_int(-200..200) as f32;
-                brick_transform.translation.y = generate_random_int(500..1000) as f32;
-                brick.time_still_move_x = brick_transform.translation.x;
-                brick.time_still_move_y = brick_transform.translation.y;
-                brick.time_still = 0.0;
-                brick.brick_type = generate_random_int(1..3);
-                brick.to_delete = 0;
-                brick.vel_y = 0.0;
-                brick.vel_x = 0.0;
-                brick.touching_array = Vec::new();
-            }
-        }
-    }
+    let mut was_deleted = false;
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-           // brick_transform.translation.x = brick_transform.translation.x + generate_random_int(-1..1) as f32;
+            brick_transform.translation.x = generate_random_int(-200..200) as f32;
+            brick_transform.translation.y = generate_random_int(500..1000) as f32;
+            brick.time_still_move_x = brick_transform.translation.x;
+            brick.time_still_move_y = brick_transform.translation.y;
+            brick.time_still = 0.0;
+            brick.brick_type = generate_random_int(1..3);
+            brick.to_delete = 0;
+            brick.vel_y = 0.0;
+            brick.vel_x = 0.0;
+            brick.touching_array = Vec::new();
+            was_deleted = true;
+        }
+    }
+
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        if was_deleted == true {
+            brick.time_still = 0.;
         }
     }
 }
