@@ -23,6 +23,7 @@ pub struct BrickCompare {
 }
 
 const MAX_TIME_STILL: f32 = 100.;
+const MAX_BRICKS: f32 = 10;
 
 pub fn setup_brick(
     mut commands: Commands,
@@ -32,7 +33,7 @@ pub fn setup_brick(
 ) {
     // Brick
     let brick_size: f32 = 20.;
-    for _i in 0..30 {
+    for _i in 0..MAX_BRICKS {
         let random_brick_type = generate_random_int(1..4);
         let mut color_r = generate_random_int(0..100) as f32 / 100.0;
         let mut color_g = generate_random_int(0..100) as f32 / 100.0;
@@ -205,37 +206,124 @@ pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        let mut touching_amount = 0;
-        //brick.to_delete = 0;
+    let mut current_id = 0;
+    let mut touching_array_depth_1: Vec<i32> = Vec::new();
+    let mut touching_array_depth_2: Vec<i32> = Vec::new();
+    let mut touching_array_depth_3: Vec<i32> = Vec::new();
+    let mut touching_array_depth_4: Vec<i32> = Vec::new();
 
-        for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
-            if obstacle.id == brick.id {
-                continue;
+    for _i in 0..MAX_BRICKS {
+        current_id = _i;
+        touching_array_depth_1 = Vec::new();
+        touching_array_depth_2 = Vec::new();
+        touching_array_depth_3 = Vec::new();
+
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            if brick.time_still < 500. {
+                return;
             }
+        }
 
-            let brick_position = brick_transform.translation;
-            let obstacle_position = obstacle_transform.translation;
+        // Depth 1
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+                if obstacle.id == brick.id {
+                    continue;
+                }
 
-            let distance = brick_position.distance(obstacle_position);
-            let brick_radius = brick.size / 1.5;
-            let obstacle_radius = obstacle.size / 1.5;
+                let brick_position = brick_transform.translation;
+                let obstacle_position = obstacle_transform.translation;
 
-            if distance < brick_radius + obstacle_radius {
-                if brick.time_still >= 500. {
-                    if brick.brick_type == obstacle.brick_type {
-                        if !brick.touching_array.contains(&obstacle.id) {
-                            brick.touching_array.push(obstacle.id); 
+                let distance = brick_position.distance(obstacle_position);
+                let brick_radius = brick.size / 1.5;
+                let obstacle_radius = obstacle.size / 1.5;
+
+                if distance < brick_radius + obstacle_radius {
+                    if brick.time_still >= 500. {
+                        if brick.brick_type == obstacle.brick_type {
+                            if !touching_array_depth_1.contains(&obstacle.id) {
+                                touching_array_depth_1.push(brick.id);
+                                touching_array_depth_1.push(obstacle.id);
+                            }
                         }
-                        // Reset
-                        //brick.array = Vec::new();
                     }
                 }
             }
         }
 
-        if touching_amount >= 3 {
-            brick.to_delete = 1;
+        // Depth 2
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+                if obstacle.id == brick.id {
+                    continue;
+                }
+
+                if !touching_array_depth_1.contains(&brick.id) {
+                    continue;
+                }
+
+                let brick_position = brick_transform.translation;
+                let obstacle_position = obstacle_transform.translation;
+
+                let distance = brick_position.distance(obstacle_position);
+                let brick_radius = brick.size / 1.5;
+                let obstacle_radius = obstacle.size / 1.5;
+
+                if distance < brick_radius + obstacle_radius {
+                    if brick.time_still >= 500. {
+                        if brick.brick_type == obstacle.brick_type {
+                            if !touching_array_depth_2.contains(&obstacle.id) {
+                                touching_array_depth_2.push(obstacle.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Depth 3
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+                if obstacle.id == brick.id {
+                    continue;
+                }
+
+                if !touching_array_depth_1.contains(&brick.id) {
+                    continue;
+                }
+
+                if !touching_array_depth_2.contains(&brick.id) {
+                    continue;
+                }
+
+                let brick_position = brick_transform.translation;
+                let obstacle_position = obstacle_transform.translation;
+
+                let distance = brick_position.distance(obstacle_position);
+                let brick_radius = brick.size / 1.5;
+                let obstacle_radius = obstacle.size / 1.5;
+
+                if distance < brick_radius + obstacle_radius {
+                    if brick.time_still >= 500. {
+                        if brick.brick_type == obstacle.brick_type {
+                            if !touching_array_depth_3.contains(&obstacle.id) {
+                                touching_array_depth_3.push(obstacle.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if touching_array_depth_3.len() >= 1 {
+            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+                if touching_array_depth_1.contains(&brick.id)
+                    || touching_array_depth_2.contains(&brick.id)
+                    || touching_array_depth_3.contains(&brick.id)
+                {
+                    brick.to_delete = 1;
+                }
+            }
         }
     }
 }
@@ -244,23 +332,13 @@ pub fn delete_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    let mut array_to_remove: Vec<i32> = Vec::new();
-
     if generate_random_int(0..100) == 0 {
-        array_to_remove = Vec::new();
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.touching_array.len() >= 3 {
-                println!("add to remove: {:?}", brick.touching_array);
-                array_to_remove.extend(&brick.touching_array);
-            }
-        }
-
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if array_to_remove.contains(&brick.id) {
+            if brick.to_delete == 1 {
                 println!("remove: {:?}", brick.id);
                 brick_transform.translation.x = generate_random_int(-200..200) as f32;
                 brick_transform.translation.y = generate_random_int(500..1000) as f32;
-                brick.time_still_move_x = brick_transform.translation.x ;
+                brick.time_still_move_x = brick_transform.translation.x;
                 brick.time_still_move_y = brick_transform.translation.y;
                 brick.time_still = 0.0;
                 brick.brick_type = generate_random_int(1..3);
@@ -269,6 +347,11 @@ pub fn delete_touching(
                 brick.vel_x = 0.0;
                 brick.touching_array = Vec::new();
             }
+        }
+    }
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        if brick.to_delete == 1 {
+           // brick_transform.translation.x = brick_transform.translation.x + generate_random_int(-1..1) as f32;
         }
     }
 }
