@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 
 use crate::{generate_random_int, setupcamera};
 use bevy::prelude::*;
@@ -232,6 +232,7 @@ pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
+    let mut current_id = 0;
 
     for _i in 0..MAX_BRICKS {
         current_id = _i;
@@ -254,7 +255,7 @@ pub fn check_touching(
             }
         }
 
-        let mut connections: HashMap<i32, HashSet<i32>> = HashMap::new();
+        // Use a HashSet to track visited bricks and a queue for BFS
         let mut visited = HashSet::new();
         let mut queue: VecDeque<(i32, usize)> = VecDeque::new();
 
@@ -282,16 +283,6 @@ pub fn check_touching(
                     if distance < brick_radius + obstacle_radius
                         && brick.brick_type == obstacle.brick_type
                     {
-                        // Record the connection
-                        connections
-                            .entry(current_id)
-                            .or_default()
-                            .insert(obstacle.id);
-                        connections
-                            .entry(obstacle.id)
-                            .or_default()
-                            .insert(current_id);
-
                         visited.insert(obstacle.id);
                         queue.push_back((obstacle.id, depth + 1));
                     }
@@ -299,11 +290,10 @@ pub fn check_touching(
             }
         }
 
+        // Mark bricks for deletion if they are in the visited set
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if let Some(connected) = connections.get(&brick.id) {
-                if connected.len() >= 3 {
-                    brick.to_delete = 1;
-                }
+            if visited.contains(&brick.id) {
+                brick.to_delete = 1;
             }
         }
     }
