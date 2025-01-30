@@ -1,5 +1,3 @@
-use std::slice::Windows;
-
 use bevy::prelude::*;
 use rand::Rng;
 mod setupbrick;
@@ -49,7 +47,7 @@ struct MousePos {
     x: f32,
     y: f32,
     clicked: bool,
-    next_random_brick: i32
+    next_random_brick: i32,
 }
 
 fn setup_main(
@@ -66,17 +64,67 @@ fn setup_main(
     });
      */
 
+    let gen_next_random_brick = generate_random_int(1..4);
+    let mut color_r = generate_random_int(0..100) as f32 / 100.0;
+    let mut color_g = generate_random_int(0..100) as f32 / 100.0;
+    let mut color_b = generate_random_int(0..100) as f32 / 100.0;
+    if gen_next_random_brick == 1 {
+        color_r = 1.0;
+        color_g = 0.2;
+        color_b = 0.2;
+    }
+
+    if gen_next_random_brick == 2 {
+        color_r = 0.2;
+        color_g = 1.0;
+        color_b = 0.2;
+    }
+
+    if gen_next_random_brick == 3 {
+        color_r = 0.2;
+        color_g = 0.2;
+        color_b = 1.0;
+    }
+
     commands.spawn((
         Mesh2d(meshes.add(Circle::default())),
-        MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
-        Transform::from_translation(Vec3::new(0.0, 100.0, 10.0))
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
             .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
-            MousePos {
-                x: 0.0,
-                y: 0.0,
-                clicked: false,
-                next_random_brick: generate_random_int(1..4)
-            },
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+        },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
@@ -107,50 +155,38 @@ fn cursor_events(
     mut evr_cursor: EventReader<CursorMoved>,
     mut query: Query<(&mut Transform, &mut MousePos)>,
     buttons: Res<ButtonInput<MouseButton>>,
-    window: Query<&Window>
+    window: Query<&Window>,
 ) {
-
     let window = window.single();
 
     let width = window.resolution.width();
 
     for ev in evr_cursor.read() {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            mouse_pos.x = (ev.position.x - width / 2.0).clamp(-50.0, 50.0); 
+            mouse_pos.x = (ev.position.x - width / 2.0).clamp(-50.0, 50.0);
             mouse_pos.y = ev.position.y;
 
             mouse_transform.translation.x = mouse_pos.x;
             //println!("mouse x: {}", mouse_pos.x);
-
-            let mut color_r = generate_random_int(0..100) as f32 / 100.0;
-            let mut color_g = generate_random_int(0..100) as f32 / 100.0;
-            let mut color_b = generate_random_int(0..100) as f32 / 100.0;
-            if mouse_pos.next_random_brick == 1 {
-                color_r = 1.0;
-                color_g = 0.2;
-                color_b = 0.2;
-            }
-    
-            if mouse_pos.next_random_brick == 2 {
-                color_r = 0.2;
-                color_g = 1.0;
-                color_b = 0.2;
-            }
-    
-            if mouse_pos.next_random_brick == 3 {
-                color_r = 0.2;
-                color_g = 0.2;
-                color_b = 1.0;
-            }
-
-            // set color
         }
     }
 
+    for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+        mouse_transform.translation.z = 0.0;
+    }
+
+    let mut i = 1;
+    for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+        if i == mouse_pos.next_random_brick {
+            mouse_transform.translation.z = 20.;
+        }
+        println!("Current index: {}, Next random brick: {}", i, mouse_pos.next_random_brick);
+        i += 1;
+    }
+    
     if buttons.just_pressed(MouseButton::Left) {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
             mouse_pos.clicked = true;
-            mouse_pos.next_random_brick = generate_random_int(1..4);
         }
     }
 }

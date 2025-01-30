@@ -281,14 +281,20 @@ pub fn spawn_brick(
     let mut mouse_x = 0.0;
     let mut mouse_y = 0.0;
     let mut clicked = false;
-    let mut random_brick = generate_random_int(1..4);
+    let mut random_brick = 1;
+    let mut random_brick_gen = generate_random_int(1..4);
     for mut mouse_pos in query.iter_mut() {
         mouse_x = mouse_pos.x;
         mouse_y = mouse_pos.y;
         clicked = mouse_pos.clicked;
         random_brick = mouse_pos.next_random_brick;
 
+        if clicked == true {
+                    // Reset
+        mouse_pos.next_random_brick = random_brick_gen;
         mouse_pos.clicked = false;
+        }
+
     }
     if clicked == true {
         let mut brick_amount = 0;
