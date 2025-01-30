@@ -40,7 +40,10 @@ pub fn setup_brick(
     asset_server: Res<AssetServer>,
 ) {
     // Brick
-    for _i in 0..MAX_BRICKS {}
+    for _i in 0..MAX_BRICKS {
+
+        
+    }
 }
 
 pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
@@ -57,8 +60,8 @@ pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
             brick.vel_y -= 0.1;
         }
 
-        if transform.translation.y <= -50.0 {
-            transform.translation.y = -50.0;
+        if transform.translation.y <= -80.0 {
+            transform.translation.y = -80.0;
         }
         transform.translation.y += brick.vel_y;
 
@@ -112,12 +115,33 @@ pub fn collision_check_brick(
 pub fn set_pos_compare_brick(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare)>,
     query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompare>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    // if miss
     for (brick_transform, brick) in query_brick.iter() {
+        let mut found_compare = false;
         for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
             if brick_compare.id == brick.id {
                 brick_transform_compare.translation = brick_transform.translation;
+                found_compare = true;
             }
+        }
+        if found_compare == false {
+            println!("FOUND FALSE");
+            commands.spawn((
+                Mesh2d(meshes.add(Circle::default())),
+                MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
+                Transform::from_translation(Vec3::new(0., 100., 50.0))
+                    .with_scale(Vec2::splat(5.0).extend(1.)),
+                BrickCompare {
+                    id: brick.id,
+                    brick_type: brick.brick_type,
+                    size: BRICK_SIZE,
+                },
+                setupcamera::PIXEL_PERFECT_LAYERS,
+            ));
         }
     }
 }
@@ -141,7 +165,6 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
         //let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
         //let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
-
         let rounded_x = (brick_transform.translation.x).round();
         let rounded_y = (brick_transform.translation.y).round();
 
@@ -171,27 +194,6 @@ pub fn check_touching(
 
     for _i in 0..brick_amount {
         current_id = _i;
-
-        /*
-        let mut reset_run = false;
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            if brick.time_still > 3000. {
-                reset_run = true;
-            }
-
-            if brick.time_still < MAX_TIME_STILL * 2. && reset_run == false {
-                //return;
-            }
-        }
-
-        // If nothing happened for 2 minutes
-        if reset_run == true {
-            for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-                brick.to_delete = 1;
-            }
-        }
-         */
-
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
             let mut visited = HashSet::new();
             let mut queue: VecDeque<i32> = VecDeque::new();
@@ -217,8 +219,8 @@ pub fn check_touching(
                     let obstacle_position = obstacle_transform.translation;
 
                     let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 2.0;
-                    let obstacle_radius = obstacle.size / 2.0;
+                    let brick_radius = brick.size / 1.7;
+                    let obstacle_radius = obstacle.size / 1.7;
 
                     if distance < brick_radius + obstacle_radius
                         && brick.brick_type == obstacle.brick_type
@@ -230,7 +232,7 @@ pub fn check_touching(
             }
 
             // If the cluster is big enough, mark all bricks in it for deletion
-            if cluster_size >= 3 {
+            if cluster_size >= 4 {
                 to_delete_list.extend(visited);
             }
         }
@@ -282,7 +284,7 @@ pub fn spawn_brick(
     let mut mouse_y = 0.0;
     let mut clicked = false;
     let mut random_brick = 1;
-    let mut random_brick_gen = generate_random_int(1..4);
+    let mut random_brick_gen = generate_random_int(1..5);
     for mut mouse_pos in query.iter_mut() {
         mouse_x = mouse_pos.x;
         mouse_y = mouse_pos.y;
@@ -324,6 +326,12 @@ pub fn spawn_brick(
             color_r = 0.2;
             color_g = 0.2;
             color_b = 1.0;
+        }
+
+        if random_brick_type == 4 {
+            color_r = 1.0;
+            color_g = 1.0;
+            color_b = 0.2;
         }
 
         commands.spawn((

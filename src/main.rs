@@ -33,6 +33,7 @@ fn main() {
                 setupbrick::check_touching,
                 setupbrick::delete_touching,
                 setupbrick::spawn_brick,
+                backgroundpixles_movement,
             )
                 .chain(),
         )
@@ -48,6 +49,7 @@ struct MousePos {
     y: f32,
     clicked: bool,
     next_random_brick: i32,
+    time_from_clicked: f32,
 }
 
 fn setup_main(
@@ -64,7 +66,7 @@ fn setup_main(
     });
      */
 
-    let gen_next_random_brick = generate_random_int(1..4);
+    let mut gen_next_random_brick = 1;
     let mut color_r = generate_random_int(0..100) as f32 / 100.0;
     let mut color_g = generate_random_int(0..100) as f32 / 100.0;
     let mut color_b = generate_random_int(0..100) as f32 / 100.0;
@@ -74,12 +76,44 @@ fn setup_main(
         color_b = 0.2;
     }
 
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
+    gen_next_random_brick = 2;
     if gen_next_random_brick == 2 {
         color_r = 0.2;
         color_g = 1.0;
         color_b = 0.2;
     }
 
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
+    gen_next_random_brick = 3;
     if gen_next_random_brick == 3 {
         color_r = 0.2;
         color_g = 0.2;
@@ -96,9 +130,17 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
+
+    gen_next_random_brick = 4;
+    if gen_next_random_brick == 4 {
+        color_r = 1.0;
+        color_g = 1.0;
+        color_b = 0.2;
+    }
 
     commands.spawn((
         Mesh2d(meshes.add(Circle::default())),
@@ -110,23 +152,11 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
-    commands.spawn((
-        Mesh2d(meshes.add(Circle::default())),
-        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
-        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
-            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
-        MousePos {
-            x: 0.0,
-            y: 0.0,
-            clicked: false,
-            next_random_brick: gen_next_random_brick,
-        },
-        setupcamera::PIXEL_PERFECT_LAYERS,
-    ));
 
     // Background pixels
     for _i in 0..100 {
@@ -134,14 +164,25 @@ fn setup_main(
             Mesh2d(meshes.add(Rectangle::default())),
             MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
             Transform::from_xyz(
-                generate_random_int(-90..90) as f32,
-                generate_random_int(-90..90) as f32,
+                generate_random_int(-50..50) as f32,
+                generate_random_int(-100..100) as f32,
                 2.,
             )
             .with_scale(Vec3::new(1.0, 1.0, 2.0)),
             Backgroundpixles,
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
+    }
+}
+
+fn backgroundpixles_movement(
+    mut transforms: Query<&mut Transform, With<Backgroundpixles>>,
+) {
+    for mut transform in &mut transforms {
+        if generate_random_int(0..10) == 0 {
+                transform.translation.x = generate_random_int(-50..50) as f32;
+                transform.translation.y = generate_random_int(-100..100) as f32;
+        }
     }
 }
 
@@ -158,7 +199,6 @@ fn cursor_events(
     window: Query<&Window>,
 ) {
     let window = window.single();
-
     let width = window.resolution.width();
 
     for ev in evr_cursor.read() {
@@ -172,21 +212,30 @@ fn cursor_events(
     }
 
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+        mouse_transform.translation.y = 200.0;
         mouse_transform.translation.z = 20.0;
+        mouse_pos.time_from_clicked += 1.0;
     }
 
     let mut i = 1;
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+
         if i == mouse_pos.next_random_brick {
             mouse_transform.translation.z = 50.;
-            println!("Current index: {}, Next random brick: {}", i, mouse_pos.next_random_brick);
+            if mouse_pos.time_from_clicked > 400.{
+                mouse_transform.translation.y = 100.0;
+            }  
         }
         i += 1;
     }
     
     if buttons.just_pressed(MouseButton::Left) {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            mouse_pos.clicked = true;
+            if mouse_pos.time_from_clicked > 400.{
+                mouse_pos.clicked = true;
+                mouse_pos.time_from_clicked = 0.0;
+            }
         }
+        
     }
 }
