@@ -172,15 +172,15 @@ fn cursor_events(
     }
 
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-        mouse_transform.translation.z = 0.0;
+        mouse_transform.translation.z = 20.0;
     }
 
     let mut i = 1;
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
         if i == mouse_pos.next_random_brick {
-            mouse_transform.translation.z = 20.;
+            mouse_transform.translation.z = 50.;
+            println!("Current index: {}, Next random brick: {}", i, mouse_pos.next_random_brick);
         }
-        println!("Current index: {}, Next random brick: {}", i, mouse_pos.next_random_brick);
         i += 1;
     }
     
