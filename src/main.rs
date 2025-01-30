@@ -159,6 +159,19 @@ fn setup_main(
 
 
     // Background pixels
+    
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(0.1, 0.1, 0.2))),
+        Transform::from_xyz(
+            0 as f32,
+            0 as f32,
+            2.,
+        )
+        .with_scale(Vec3::new(120.0, 185.0, 0.0)),
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
     for _i in 0..100 {
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::default())),
@@ -166,22 +179,23 @@ fn setup_main(
             Transform::from_xyz(
                 generate_random_int(-50..50) as f32,
                 generate_random_int(-100..100) as f32,
-                2.,
+                5.,
             )
-            .with_scale(Vec3::new(1.0, 1.0, 2.0)),
+            .with_scale(Vec3::new(1.0, 1.0, 3.0)),
             Backgroundpixles,
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
     }
+
 }
 
 fn backgroundpixles_movement(
     mut transforms: Query<&mut Transform, With<Backgroundpixles>>,
 ) {
     for mut transform in &mut transforms {
-        if generate_random_int(0..10) == 0 {
-                transform.translation.x = generate_random_int(-50..50) as f32;
-                transform.translation.y = generate_random_int(-100..100) as f32;
+        if generate_random_int(0..50) == 0 {
+                transform.translation.x = generate_random_int(-55..55) as f32;
+                transform.translation.y = generate_random_int(-90..90) as f32;
         }
     }
 }
