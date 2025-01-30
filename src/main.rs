@@ -49,6 +49,7 @@ struct MousePos {
     x: f32,
     y: f32,
     clicked: bool,
+    next_random_brick: i32
 }
 
 fn setup_main(
@@ -74,6 +75,7 @@ fn setup_main(
                 x: 0.0,
                 y: 0.0,
                 clicked: false,
+                next_random_brick: generate_random_int(1..4)
             },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
@@ -118,13 +120,37 @@ fn cursor_events(
             mouse_pos.y = ev.position.y;
 
             mouse_transform.translation.x = mouse_pos.x;
-            println!("mouse x: {}", mouse_pos.x);
+            //println!("mouse x: {}", mouse_pos.x);
+
+            let mut color_r = generate_random_int(0..100) as f32 / 100.0;
+            let mut color_g = generate_random_int(0..100) as f32 / 100.0;
+            let mut color_b = generate_random_int(0..100) as f32 / 100.0;
+            if mouse_pos.next_random_brick == 1 {
+                color_r = 1.0;
+                color_g = 0.2;
+                color_b = 0.2;
+            }
+    
+            if mouse_pos.next_random_brick == 2 {
+                color_r = 0.2;
+                color_g = 1.0;
+                color_b = 0.2;
+            }
+    
+            if mouse_pos.next_random_brick == 3 {
+                color_r = 0.2;
+                color_g = 0.2;
+                color_b = 1.0;
+            }
+
+            // set color
         }
     }
 
     if buttons.just_pressed(MouseButton::Left) {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
             mouse_pos.clicked = true;
+            mouse_pos.next_random_brick = generate_random_int(1..4);
         }
     }
 }

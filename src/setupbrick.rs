@@ -248,9 +248,9 @@ pub fn delete_touching(
     mut query_brick_compare: Query<(Entity, &mut Transform, &mut BrickCompare), Without<Brick>>,
     mut commands: Commands,
 ) {
+    let mut was_deleted = false;
     for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            
             for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
                 if brick_compare.id == brick.id {
                     commands.entity(brick_entity_compare).despawn();
@@ -258,11 +258,16 @@ pub fn delete_touching(
             }
 
             commands.entity(brick_entity).despawn();
-
+            was_deleted = true;
 
         }
     }
 
+    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
+        if was_deleted == true {
+            brick.time_still = 0.;
+        }
+    }
 }
 
 pub fn spawn_brick(
@@ -276,10 +281,12 @@ pub fn spawn_brick(
     let mut mouse_x = 0.0;
     let mut mouse_y = 0.0;
     let mut clicked = false;
+    let mut random_brick = generate_random_int(1..4);
     for mut mouse_pos in query.iter_mut() {
         mouse_x = mouse_pos.x;
         mouse_y = mouse_pos.y;
         clicked = mouse_pos.clicked;
+        random_brick = mouse_pos.next_random_brick;
 
         mouse_pos.clicked = false;
     }
@@ -290,7 +297,7 @@ pub fn spawn_brick(
             brick_amount += 1;
         }
 
-        let random_brick_type = generate_random_int(1..4);
+        let random_brick_type = random_brick;
         let mut color_r = generate_random_int(0..100) as f32 / 100.0;
         let mut color_g = generate_random_int(0..100) as f32 / 100.0;
         let mut color_b = generate_random_int(0..100) as f32 / 100.0;
@@ -336,7 +343,7 @@ pub fn spawn_brick(
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
             Transform::from_translation(Vec3::new(mouse_x, 100., 50.0))
-                .with_scale(Vec2::splat(0.0).extend(1.)),
+                .with_scale(Vec2::splat(5.0).extend(1.)),
             BrickCompare {
                 id: brick_amount,
                 brick_type: random_brick_type,
