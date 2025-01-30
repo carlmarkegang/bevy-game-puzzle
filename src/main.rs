@@ -27,7 +27,6 @@ fn main() {
             (
                 setupbrick::time_still_check,
                 setupbrick::collision_check_brick,
-                setupbrick::set_time_compare_brick,
                 setupbrick::brick_movements,
                 setupbrick::check_touching,
                 setupbrick::check_touching,
@@ -71,9 +70,9 @@ fn setup_main(
     let mut color_g = generate_random_int(0..100) as f32 / 100.0;
     let mut color_b = generate_random_int(0..100) as f32 / 100.0;
     if gen_next_random_brick == 1 {
-        color_r = 1.0;
-        color_g = 0.2;
-        color_b = 0.2;
+        color_r = 0.84;
+        color_g = 0.10;
+        color_b = 0.37;
     }
 
     commands.spawn((
@@ -86,16 +85,16 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
-            time_from_clicked: 0.0
+            time_from_clicked: 0.0,
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
     gen_next_random_brick = 2;
     if gen_next_random_brick == 2 {
-        color_r = 0.2;
-        color_g = 1.0;
-        color_b = 0.2;
+        color_r = 0.11;
+        color_g = 0.53;
+        color_b = 0.89;
     }
 
     commands.spawn((
@@ -108,16 +107,16 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
-            time_from_clicked: 0.0
+            time_from_clicked: 0.0,
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
     gen_next_random_brick = 3;
     if gen_next_random_brick == 3 {
-        color_r = 0.2;
-        color_g = 0.2;
-        color_b = 1.0;
+        color_r = 1.0;
+        color_g = 0.75;
+        color_b = 0.02;
     }
 
     commands.spawn((
@@ -130,16 +129,16 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
-            time_from_clicked: 0.0
+            time_from_clicked: 0.0,
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
     gen_next_random_brick = 4;
     if gen_next_random_brick == 4 {
-        color_r = 1.0;
-        color_g = 1.0;
-        color_b = 0.2;
+        color_r = 0.0;
+        color_g = 0.30;
+        color_b = 0.25;
     }
 
     commands.spawn((
@@ -152,23 +151,17 @@ fn setup_main(
             y: 0.0,
             clicked: false,
             next_random_brick: gen_next_random_brick,
-            time_from_clicked: 0.0
+            time_from_clicked: 0.0,
         },
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
-
     // Background pixels
-    
+
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::default())),
         MeshMaterial2d(materials.add(Color::srgb(0.1, 0.1, 0.2))),
-        Transform::from_xyz(
-            0 as f32,
-            0 as f32,
-            2.,
-        )
-        .with_scale(Vec3::new(120.0, 185.0, 0.0)),
+        Transform::from_xyz(0 as f32, 0 as f32, 2.).with_scale(Vec3::new(120.0, 185.0, 0.0)),
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
@@ -186,16 +179,13 @@ fn setup_main(
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
     }
-
 }
 
-fn backgroundpixles_movement(
-    mut transforms: Query<&mut Transform, With<Backgroundpixles>>,
-) {
+fn backgroundpixles_movement(mut transforms: Query<&mut Transform, With<Backgroundpixles>>) {
     for mut transform in &mut transforms {
         if generate_random_int(0..50) == 0 {
-                transform.translation.x = generate_random_int(-55..55) as f32;
-                transform.translation.y = generate_random_int(-90..90) as f32;
+            transform.translation.x = generate_random_int(-55..55) as f32;
+            transform.translation.y = generate_random_int(-90..90) as f32;
         }
     }
 }
@@ -233,23 +223,21 @@ fn cursor_events(
 
     let mut i = 1;
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-
         if i == mouse_pos.next_random_brick {
             mouse_transform.translation.z = 50.;
-            if mouse_pos.time_from_clicked > 400.{
+            if mouse_pos.time_from_clicked > 400. {
                 mouse_transform.translation.y = 100.0;
-            }  
+            }
         }
         i += 1;
     }
-    
+
     if buttons.just_pressed(MouseButton::Left) {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            if mouse_pos.time_from_clicked > 400.{
+            if mouse_pos.time_from_clicked > 400. {
                 mouse_pos.clicked = true;
                 mouse_pos.time_from_clicked = 0.0;
             }
         }
-        
     }
 }

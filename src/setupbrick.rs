@@ -23,12 +23,6 @@ pub struct BrickCompare {
     pub brick_type: i32,
 }
 
-#[derive(Component)]
-pub struct BrickCompareTime {
-    pub id: i32,
-    pub time_still: f32,
-}
-
 const MAX_TIME_STILL: f32 = 100.;
 const MAX_BRICKS: i32 = 20;
 pub const BRICK_SIZE: f32 = 20.;
@@ -40,10 +34,7 @@ pub fn setup_brick(
     asset_server: Res<AssetServer>,
 ) {
     // Brick
-    for _i in 0..MAX_BRICKS {
-
-        
-    }
+    for _i in 0..MAX_BRICKS {}
 }
 
 pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
@@ -119,7 +110,6 @@ pub fn set_pos_compare_brick(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // if miss
     for (brick_transform, brick) in query_brick.iter() {
         let mut found_compare = false;
         for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
@@ -129,6 +119,7 @@ pub fn set_pos_compare_brick(
             }
         }
         if found_compare == false {
+            // Doesn't seem to happen
             println!("FOUND FALSE");
             commands.spawn((
                 Mesh2d(meshes.add(Circle::default())),
@@ -142,21 +133,6 @@ pub fn set_pos_compare_brick(
                 },
                 setupcamera::PIXEL_PERFECT_LAYERS,
             ));
-        }
-    }
-}
-
-pub fn set_time_compare_brick(
-    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompareTime)>,
-    query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompareTime>>,
-) {
-    for (brick_transform, brick) in query_brick.iter() {
-        for (mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
-            if brick_compare.id == brick.id {
-                brick_compare.time_still = brick.time_still;
-                brick_transform_compare.scale =
-                    Vec3::new(brick_compare.time_still - 3000.0, 2.0, 20.0);
-            }
         }
     }
 }
@@ -253,7 +229,9 @@ pub fn delete_touching(
     let mut was_deleted = false;
     for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
+            for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in
+                query_brick_compare.iter_mut()
+            {
                 if brick_compare.id == brick.id {
                     commands.entity(brick_entity_compare).despawn();
                 }
@@ -261,10 +239,10 @@ pub fn delete_touching(
 
             commands.entity(brick_entity).despawn();
             was_deleted = true;
-
         }
     }
 
+    // Unlock everything after remove
     for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
         if was_deleted == true {
             brick.time_still = 0.;
@@ -292,11 +270,10 @@ pub fn spawn_brick(
         random_brick = mouse_pos.next_random_brick;
 
         if clicked == true {
-                    // Reset
-        mouse_pos.next_random_brick = random_brick_gen;
-        mouse_pos.clicked = false;
+            // Reset
+            mouse_pos.next_random_brick = random_brick_gen;
+            mouse_pos.clicked = false;
         }
-
     }
     if clicked == true {
         let mut brick_amount = 0;
@@ -311,27 +288,27 @@ pub fn spawn_brick(
         let mut color_b = generate_random_int(0..100) as f32 / 100.0;
 
         if random_brick_type == 1 {
-            color_r = 1.0;
-            color_g = 0.2;
-            color_b = 0.2;
+            color_r = 0.84;
+            color_g = 0.10;
+            color_b = 0.37;
         }
 
         if random_brick_type == 2 {
-            color_r = 0.2;
-            color_g = 1.0;
-            color_b = 0.2;
+            color_r = 0.11;
+            color_g = 0.53;
+            color_b = 0.89;
         }
 
         if random_brick_type == 3 {
-            color_r = 0.2;
-            color_g = 0.2;
-            color_b = 1.0;
+            color_r = 1.0;
+            color_g = 0.75;
+            color_b = 0.02;
         }
 
         if random_brick_type == 4 {
-            color_r = 1.0;
-            color_g = 1.0;
-            color_b = 0.2;
+            color_r = 0.0;
+            color_g = 0.30;
+            color_b = 0.25;
         }
 
         commands.spawn((
