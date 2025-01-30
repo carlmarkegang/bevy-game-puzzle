@@ -1,6 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::{generate_random_int, setupcamera};
+use crate::{generate_random_int, setupcamera, MousePos};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -31,6 +31,7 @@ pub struct BrickCompareTime {
 
 const MAX_TIME_STILL: f32 = 100.;
 const MAX_BRICKS: i32 = 20;
+pub const BRICK_SIZE: f32 = 20.;
 
 pub fn setup_brick(
     mut commands: Commands,
@@ -39,79 +40,7 @@ pub fn setup_brick(
     asset_server: Res<AssetServer>,
 ) {
     // Brick
-    let brick_size: f32 = 20.;
-    for _i in 0..MAX_BRICKS {
-        let random_brick_type = generate_random_int(1..4);
-        let mut color_r = generate_random_int(0..100) as f32 / 100.0;
-        let mut color_g = generate_random_int(0..100) as f32 / 100.0;
-        let mut color_b = generate_random_int(0..100) as f32 / 100.0;
-
-        if random_brick_type == 1 {
-            color_r = 1.0;
-            color_g = 0.2;
-            color_b = 0.2;
-        }
-
-        if random_brick_type == 2 {
-            color_r = 0.2;
-            color_g = 1.0;
-            color_b = 0.2;
-        }
-
-        if random_brick_type == 3 {
-            color_r = 0.2;
-            color_g = 0.2;
-            color_b = 1.0;
-        }
-
-        commands.spawn((
-            Mesh2d(meshes.add(Circle::default())),
-            MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
-            Transform::from_translation(Vec3::new(
-                generate_random_int(-50..50) as f32,
-                _i as f32 * 200.0,
-                10.0,
-            ))
-            .with_scale(Vec2::splat(brick_size).extend(1.)),
-            Brick {
-                id: _i,
-                brick_type: random_brick_type,
-                vel_x: 0.0,
-                vel_y: 0.0,
-                size: brick_size,
-                time_still: 0.0,
-                time_still_move_x: 0.0,
-                time_still_move_y: 0.0,
-                to_delete: 0,
-            },
-            setupcamera::PIXEL_PERFECT_LAYERS,
-        ));
-
-        commands.spawn((
-            Mesh2d(meshes.add(Circle::default())),
-            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-            Transform::from_translation(Vec3::new(0., 0., 20.0))
-                .with_scale(Vec2::splat(0.0).extend(1.)),
-            BrickCompare {
-                id: _i,
-                brick_type: random_brick_type,
-                size: brick_size,
-            },
-            setupcamera::PIXEL_PERFECT_LAYERS,
-        ));
-
-        commands.spawn((
-            Mesh2d(meshes.add(Rectangle::default())),
-            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
-            Transform::from_xyz(0., 100. - (_i + 2) as f32, 2.)
-                .with_scale(Vec3::new(200.0, 2.0, 20.0)),
-            BrickCompareTime {
-                id: _i,
-                time_still: 0.0,
-            },
-            setupcamera::PIXEL_PERFECT_LAYERS,
-        ));
-    }
+    for _i in 0..MAX_BRICKS {}
 }
 
 pub fn brick_movements(mut brick_query: Query<(&mut Transform, &mut Brick)>) {
@@ -234,8 +163,13 @@ pub fn check_touching(
 ) {
     let mut current_id = 0;
     let mut to_delete_list: Vec<i32> = Vec::new();
+    let mut brick_amount = 0;
 
-    for _i in 0..MAX_BRICKS {
+    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        brick_amount = 1;
+    }
+
+    for _i in 0..brick_amount {
         current_id = _i;
 
         let mut reset_run = false;
@@ -331,5 +265,100 @@ pub fn delete_touching(
         if was_deleted == true {
             brick.time_still = 0.;
         }
+    }
+}
+
+pub fn spawn_brick(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+    mut query_brick: Query<(&mut Transform, &mut Brick)>,
+    mut query: Query<&mut MousePos>,
+) {
+    let mut mouse_x = 0.0;
+    let mut mouse_y = 0.0;
+    let mut clicked = false;
+    for mut mouse_pos in query.iter_mut() {
+        mouse_x = mouse_pos.x;
+        mouse_y = mouse_pos.y;
+        clicked = mouse_pos.clicked;
+
+        mouse_pos.clicked = false;
+    }
+    if clicked == true {
+        let mut brick_amount = 0;
+
+        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+            brick_amount = 1;
+        }
+
+        let random_brick_type = generate_random_int(1..4);
+        let mut color_r = generate_random_int(0..100) as f32 / 100.0;
+        let mut color_g = generate_random_int(0..100) as f32 / 100.0;
+        let mut color_b = generate_random_int(0..100) as f32 / 100.0;
+
+        if random_brick_type == 1 {
+            color_r = 1.0;
+            color_g = 0.2;
+            color_b = 0.2;
+        }
+
+        if random_brick_type == 2 {
+            color_r = 0.2;
+            color_g = 1.0;
+            color_b = 0.2;
+        }
+
+        if random_brick_type == 3 {
+            color_r = 0.2;
+            color_g = 0.2;
+            color_b = 1.0;
+        }
+
+        commands.spawn((
+            Mesh2d(meshes.add(Circle::default())),
+            MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+            Transform::from_translation(Vec3::new(mouse_x as f32, 100.0, 10.0))
+                .with_scale(Vec2::splat(BRICK_SIZE).extend(1.)),
+            Brick {
+                id: brick_amount,
+                brick_type: random_brick_type,
+                vel_x: 0.0,
+                vel_y: 0.0,
+                size: BRICK_SIZE,
+                time_still: 0.0,
+                time_still_move_x: 0.0,
+                time_still_move_y: 0.0,
+                to_delete: 0,
+            },
+            setupcamera::PIXEL_PERFECT_LAYERS,
+        ));
+
+        commands.spawn((
+            Mesh2d(meshes.add(Circle::default())),
+            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
+            Transform::from_translation(Vec3::new(0., 0., 20.0))
+                .with_scale(Vec2::splat(0.0).extend(1.)),
+            BrickCompare {
+                id: brick_amount,
+                brick_type: random_brick_type,
+                size: BRICK_SIZE,
+            },
+            setupcamera::PIXEL_PERFECT_LAYERS,
+        ));
+
+        commands.spawn((
+            Mesh2d(meshes.add(Rectangle::default())),
+            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
+            Transform::from_xyz(0., 100. - (brick_amount + 2) as f32, 2.)
+                .with_scale(Vec3::new(200.0, 2.0, 20.0)),
+            BrickCompareTime {
+                id: brick_amount,
+                time_still: 0.0,
+            },
+            setupcamera::PIXEL_PERFECT_LAYERS,
+        ));
+        clicked = false;
     }
 }

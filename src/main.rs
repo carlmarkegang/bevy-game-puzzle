@@ -1,7 +1,9 @@
+use std::slice::Windows;
+
 use bevy::prelude::*;
 use rand::Rng;
-mod setupcamera;
 mod setupbrick;
+mod setupcamera;
 
 fn main() {
     App::new()
@@ -14,7 +16,14 @@ fn main() {
                 setupbrick::setup_brick,
             ),
         )
-        .add_systems(Update, (setupcamera::fit_canvas, cursor_events))
+        .add_systems(
+            Update,
+            (
+                setupcamera::fit_canvas,
+                cursor_events,
+                setupbrick::spawn_brick,
+            ),
+        )
         .add_systems(
             FixedUpdate,
             (
@@ -25,8 +34,7 @@ fn main() {
                 setupbrick::brick_movements,
                 setupbrick::check_touching,
                 setupbrick::check_touching,
-                setupbrick::delete_touching
-                
+                setupbrick::delete_touching,
             )
                 .chain(),
         )
@@ -40,6 +48,7 @@ struct Backgroundpixles;
 struct MousePos {
     x: f32,
     y: f32,
+    clicked: bool,
 }
 
 fn setup_main(
@@ -48,7 +57,26 @@ fn setup_main(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn(MousePos { x: 0.0, y: 0.0 });
+    /*
+    commands.spawn(MousePos {
+        x: 0.0,
+        y: 0.0,
+        clicked: false,
+    });
+     */
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
+        Transform::from_translation(Vec3::new(0.0, 50.0, 10.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+            MousePos {
+                x: 0.0,
+                y: 0.0,
+                clicked: false,
+            },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
 
     // Background pixels
     for _i in 0..100 {
@@ -73,19 +101,30 @@ fn generate_random_int(maxmin: std::ops::Range<i32>) -> i32 {
     generated_float
 }
 
-fn cursor_events(mut evr_cursor: EventReader<CursorMoved>, mut query: Query<&mut MousePos>) {
-    for ev in evr_cursor.read() {
-        // Log the cursor position
-        /*
-        println!(
-            "New cursor position: X: {}, Y: {}, in Window ID: {:?}",
-            ev.position.x, ev.position.y, ev.window
-        );
-         */
+fn cursor_events(
+    mut evr_cursor: EventReader<CursorMoved>,
+    mut query: Query<(&mut Transform, &mut MousePos)>,
+    buttons: Res<ButtonInput<MouseButton>>,
+    window: Query<&Window>
+) {
 
-        for mut mouse_pos in query.iter_mut() {
-            mouse_pos.x = ev.position.x;
+    let window = window.single();
+
+    let width = window.resolution.width();
+
+    for ev in evr_cursor.read() {
+        for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+            mouse_pos.x = ev.position.x - width / 2.0; 
             mouse_pos.y = ev.position.y;
+
+            mouse_transform.translation.x = mouse_pos.x;
+            println!("mouse x: {}", mouse_pos.x);
+        }
+    }
+
+    if buttons.just_pressed(MouseButton::Left) {
+        for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+            mouse_pos.clicked = true;
         }
     }
 }
