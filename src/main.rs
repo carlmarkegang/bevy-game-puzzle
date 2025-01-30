@@ -21,7 +21,7 @@ fn main() {
             (
                 setupcamera::fit_canvas,
                 cursor_events,
-                setupbrick::spawn_brick,
+                setupbrick::set_pos_compare_brick,
             ),
         )
         .add_systems(
@@ -29,12 +29,12 @@ fn main() {
             (
                 setupbrick::time_still_check,
                 setupbrick::collision_check_brick,
-                setupbrick::set_pos_compare_brick,
                 setupbrick::set_time_compare_brick,
                 setupbrick::brick_movements,
                 setupbrick::check_touching,
                 setupbrick::check_touching,
                 setupbrick::delete_touching,
+                setupbrick::spawn_brick,
             )
                 .chain(),
         )
@@ -68,7 +68,7 @@ fn setup_main(
     commands.spawn((
         Mesh2d(meshes.add(Circle::default())),
         MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
-        Transform::from_translation(Vec3::new(0.0, 50.0, 10.0))
+        Transform::from_translation(Vec3::new(0.0, 100.0, 10.0))
             .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
             MousePos {
                 x: 0.0,
@@ -114,7 +114,7 @@ fn cursor_events(
 
     for ev in evr_cursor.read() {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            mouse_pos.x = ev.position.x - width / 2.0; 
+            mouse_pos.x = (ev.position.x - width / 2.0).clamp(-50.0, 50.0); 
             mouse_pos.y = ev.position.y;
 
             mouse_transform.translation.x = mouse_pos.x;

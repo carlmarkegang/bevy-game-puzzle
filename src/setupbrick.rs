@@ -166,12 +166,13 @@ pub fn check_touching(
     let mut brick_amount = 0;
 
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        brick_amount = 1;
+        brick_amount += 1;
     }
 
     for _i in 0..brick_amount {
         current_id = _i;
 
+        /*
         let mut reset_run = false;
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
             if brick.time_still > 3000. {
@@ -179,7 +180,7 @@ pub fn check_touching(
             }
 
             if brick.time_still < MAX_TIME_STILL * 2. && reset_run == false {
-                return;
+                //return;
             }
         }
 
@@ -189,6 +190,7 @@ pub fn check_touching(
                 brick.to_delete = 1;
             }
         }
+         */
 
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
             let mut visited = HashSet::new();
@@ -242,30 +244,25 @@ pub fn check_touching(
 }
 
 pub fn delete_touching(
-    mut query_brick: Query<(&mut Transform, &mut Brick)>,
-    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
+    mut query_brick: Query<(Entity, &mut Transform, &mut Brick)>,
+    mut query_brick_compare: Query<(Entity, &mut Transform, &mut BrickCompare), Without<Brick>>,
+    mut commands: Commands,
 ) {
-    let mut was_deleted = false;
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            brick_transform.translation.x = generate_random_int(-100..100) as f32;
-            brick_transform.translation.y = generate_random_int(500..2000) as f32;
-            brick.time_still_move_x = brick_transform.translation.x;
-            brick.time_still_move_y = brick_transform.translation.y;
-            brick.time_still = 0.0;
-            brick.brick_type = generate_random_int(1..3);
-            brick.to_delete = 0;
-            brick.vel_y = 0.0;
-            brick.vel_x = 0.0;
-            was_deleted = true;
+            
+            for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in query_brick_compare.iter_mut() {
+                if brick_compare.id == brick.id {
+                    commands.entity(brick_entity_compare).despawn();
+                }
+            }
+
+            commands.entity(brick_entity).despawn();
+
+
         }
     }
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        if was_deleted == true {
-            brick.time_still = 0.;
-        }
-    }
 }
 
 pub fn spawn_brick(
@@ -290,7 +287,7 @@ pub fn spawn_brick(
         let mut brick_amount = 0;
 
         for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            brick_amount = 1;
+            brick_amount += 1;
         }
 
         let random_brick_type = generate_random_int(1..4);
@@ -338,7 +335,7 @@ pub fn spawn_brick(
         commands.spawn((
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-            Transform::from_translation(Vec3::new(0., 0., 20.0))
+            Transform::from_translation(Vec3::new(mouse_x, 100., 50.0))
                 .with_scale(Vec2::splat(0.0).extend(1.)),
             BrickCompare {
                 id: brick_amount,
@@ -348,17 +345,6 @@ pub fn spawn_brick(
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
 
-        commands.spawn((
-            Mesh2d(meshes.add(Rectangle::default())),
-            MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 1.0))),
-            Transform::from_xyz(0., 100. - (brick_amount + 2) as f32, 2.)
-                .with_scale(Vec3::new(200.0, 2.0, 20.0)),
-            BrickCompareTime {
-                id: brick_amount,
-                time_still: 0.0,
-            },
-            setupcamera::PIXEL_PERFECT_LAYERS,
-        ));
         clicked = false;
     }
 }
