@@ -165,6 +165,14 @@ fn setup_main(
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.4, 0.4))),
+        Transform::from_xyz(0 as f32, 80. as f32, 20.)
+        .with_scale(Vec3::new(120.0, 1.0, 20.0)),
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
     for _i in 0..100 {
         commands.spawn((
             Mesh2d(meshes.add(Rectangle::default())),

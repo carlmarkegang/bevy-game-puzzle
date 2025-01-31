@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 
 use crate::{generate_random_int, setupcamera, MousePos};
-use bevy::prelude::*;
+use bevy::{prelude::*, text::cosmic_text::ttf_parser::Width};
 
 #[derive(Component)]
 pub struct Brick {
@@ -14,6 +14,8 @@ pub struct Brick {
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
     pub to_delete: i32,
+    pub victory: bool,
+    pub set_victory_text: bool
 }
 
 #[derive(Component)]
@@ -81,6 +83,9 @@ pub fn collision_check_brick(
                 brick.vel_x = 0.0;
                 brick_transform.translation.x = brick.time_still_move_x;
                 brick_transform.translation.y = brick.time_still_move_y;
+                if brick.time_still_move_y > 80.0 {
+                    brick.victory = true;
+                }
                 continue;
             }
 
@@ -121,10 +126,10 @@ pub fn set_pos_compare_brick(
 
 pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        //let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
-        //let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
-        let rounded_x = (brick_transform.translation.x).round();
-        let rounded_y = (brick_transform.translation.y).round();
+        let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
+        let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
+        //let rounded_x = (brick_transform.translation.x).round();
+        //let rounded_y = (brick_transform.translation.y).round();
 
         if rounded_x == brick.time_still_move_x && rounded_y == brick.time_still_move_y {
             brick.time_still += 1.0;
@@ -219,6 +224,20 @@ pub fn delete_touching(
         if was_deleted == true {
             brick.time_still = 0.;
         }
+
+        if brick.victory == true && brick.set_victory_text == false {
+            commands.spawn((
+                Text::new("Victory!"),
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px((setupcamera::RES_WIDTH / 2) as f32 ),
+                    left: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
+                    ..default()
+                },
+                setupcamera::PIXEL_PERFECT_LAYERS,
+            ));
+            brick.set_victory_text = true;
+        }
     }
 }
 
@@ -298,6 +317,8 @@ pub fn spawn_brick(
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
                 to_delete: 0,
+                victory: false,
+                set_victory_text: false
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
