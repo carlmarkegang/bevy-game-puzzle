@@ -266,7 +266,7 @@ pub fn spawn_brick(
     let mut random_brick = 1;
     let mut random_brick_gen = generate_random_int(1..5);
     for mut mouse_pos in query.iter_mut() {
-        mouse_x = mouse_pos.x + (generate_random_int(-2..3)) as f32;
+        mouse_x = mouse_pos.x + (generate_random_int(-4..5)) as f32;
         mouse_y = mouse_pos.y;
         clicked = mouse_pos.clicked;
         random_brick = mouse_pos.next_random_brick;
