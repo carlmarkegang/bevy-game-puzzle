@@ -91,15 +91,16 @@ pub fn collision_check_brick(
             let brick_radius = brick.size / 2.;
             let obstacle_radius = obstacle.size / 2.;
             if distance < brick_radius + obstacle_radius {
-                if distance > 0.0 {  // Avoid NaN issues
+                if distance > 0.0 {
+                    // Avoid NaN issues
                     let shift_vector = (brick_position - obstacle_position).normalize();
                     //let shift_distance = (brick_radius + obstacle_radius - distance) / 2.0; // Dampening effect
                     let shift_distance = brick_radius + obstacle_radius - distance; // Full push instead of half
-                    brick_transform.translation += shift_vector * shift_distance;
-                    obstacle_transform.translation -= shift_vector * shift_distance;
+                    brick_transform.translation.x += shift_vector.x * shift_distance;
+                    brick_transform.translation.y += shift_vector.y * shift_distance;
+                    //obstacle_transform.translation -= shift_vector * shift_distance;
                     //brick.vel_y = -1.0;
                 }
-                
             }
         }
     }
@@ -108,33 +109,12 @@ pub fn collision_check_brick(
 pub fn set_pos_compare_brick(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare)>,
     query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompare>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for (brick_transform, brick) in query_brick.iter() {
-        let mut found_compare = false;
         for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
             if brick_compare.id == brick.id {
                 brick_transform_compare.translation = brick_transform.translation;
-                found_compare = true;
             }
-        }
-        if found_compare == false {
-            // Doesn't seem to happen
-            println!("FOUND FALSE");
-            commands.spawn((
-                Mesh2d(meshes.add(Circle::default())),
-                MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-                Transform::from_translation(Vec3::new(0., 100., 50.0))
-                    .with_scale(Vec2::splat(5.0).extend(1.)),
-                BrickCompare {
-                    id: brick.id,
-                    brick_type: brick.brick_type,
-                    size: BRICK_SIZE,
-                },
-                setupcamera::PIXEL_PERFECT_LAYERS,
-            ));
         }
     }
 }
@@ -161,58 +141,48 @@ pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    let mut current_id = 0;
     let mut to_delete_list: Vec<i32> = Vec::new();
-    let mut brick_amount = 0;
 
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        brick_amount += 1;
-    }
+        let mut visited = HashSet::new();
+        let mut queue: VecDeque<i32> = VecDeque::new();
+        let mut cluster_size = 0;
 
-    for _i in 0..brick_amount {
-        current_id = _i;
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            let mut visited = HashSet::new();
-            let mut queue: VecDeque<i32> = VecDeque::new();
-            let mut cluster_size = 0;
+        // If the brick is already checked, skip
+        if visited.contains(&brick.id) {
+            continue;
+        }
 
-            // If the brick is already checked, skip
-            if visited.contains(&brick.id) {
-                continue;
-            }
+        queue.push_back(brick.id);
+        visited.insert(brick.id);
 
-            queue.push_back(brick.id);
-            visited.insert(brick.id);
+        while let Some(current_id) = queue.pop_front() {
+            cluster_size += 1;
 
-            while let Some(current_id) = queue.pop_front() {
-                cluster_size += 1;
+            for (obstacle_transform, obstacle) in query_brick_compare.iter() {
+                if visited.contains(&obstacle.id) {
+                    continue;
+                }
 
-                for (obstacle_transform, obstacle) in query_brick_compare.iter() {
-                    if visited.contains(&obstacle.id) {
-                        continue;
-                    }
+                let brick_position = brick_transform.translation;
+                let obstacle_position = obstacle_transform.translation;
 
-                    let brick_position = brick_transform.translation;
-                    let obstacle_position = obstacle_transform.translation;
+                let distance = brick_position.distance(obstacle_position);
+                let brick_radius = brick.size / 1.9;
+                let obstacle_radius = obstacle.size / 1.9;
 
-                    let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 1.5;
-                    let obstacle_radius = obstacle.size / 1.5;
-
-                    if distance < brick_radius + obstacle_radius
-                    {
-                        if brick.brick_type == obstacle.brick_type {
-                            visited.insert(obstacle.id);
-                            queue.push_back(obstacle.id);
-                        }
+                if distance < brick_radius + obstacle_radius {
+                    if brick.brick_type == obstacle.brick_type {
+                        visited.insert(obstacle.id);
+                        queue.push_back(obstacle.id);
                     }
                 }
             }
+        }
 
-            // If the cluster is big enough, mark all bricks in it for deletion
-            if cluster_size >= 4 {
-                to_delete_list.extend(visited);
-            }
+        // If the cluster is big enough, mark all bricks in it for deletion
+        if cluster_size >= 4 {
+            to_delete_list.extend(visited);
         }
     }
 
@@ -335,8 +305,8 @@ pub fn spawn_brick(
         commands.spawn((
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-            Transform::from_translation(Vec3::new(mouse_x, 100., 50.0))
-                .with_scale(Vec2::splat(5.0).extend(1.)),
+            Transform::from_translation(Vec3::new(mouse_x, 100., 10.0))
+                .with_scale(Vec2::splat(0.).extend(1.0)),
             BrickCompare {
                 id: brick_amount,
                 brick_type: random_brick_type,
