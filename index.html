@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bevy Game Puzzle</title>
-    <script>
-        async function loadWasm() {
-            const response = await fetch('bevy_game_puzzle.wasm');
-            const bytes = await response.arrayBuffer();
-            const { instance } = await WebAssembly.instantiate(bytes);
-            // Call your WASM functions here
-        }
-        loadWasm();
-    </script>
+    <title>Your Bevy Game</title>
 </head>
 <body>
+    <h1>Bevy Game in the Browser</h1>
+
     <script>
-        // Initialize your game here
+        // Assuming 'game.js' is the JS loader that loads the wasm file
+        WebAssembly.instantiateStreaming(fetch('game.wasm'))
+            .then(obj => {
+                // Here you would start the game after loading
+                obj.instance.exports.start();  // Or whatever function starts your game
+            })
+            .catch(e => console.error("Error loading WebAssembly", e));
     </script>
+
+    <!-- Optionally, include other assets (like a canvas element or styles) -->
 </body>
 </html>
