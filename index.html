@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bevy Game Puzzle</title>
+    <script>
+        async function loadWasm() {
+            const response = await fetch('bevy_game_puzzle.wasm');
+            const bytes = await response.arrayBuffer();
+            const { instance } = await WebAssembly.instantiate(bytes);
+            // Call your WASM functions here
+        }
+        loadWasm();
+    </script>
+</head>
+<body>
+    <script>
+        // Initialize your game here
+    </script>
+</body>
+</html>

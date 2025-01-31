@@ -10,6 +10,11 @@
  * cargo fix  - Auto clean project
  * Clear-History
 
+## Web build for release
+ * cargo build --target wasm32-unknown-unknown --profile wasm-release
+ * Build will land in: target/wasm32-unknown-unknown/wasm-release/
+ * ???
+
 ## install web
  * rustup target install wasm32-unknown-unknown
  * cargo install wasm-server-runner
