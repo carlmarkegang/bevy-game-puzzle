@@ -91,13 +91,15 @@ pub fn collision_check_brick(
             let brick_radius = brick.size / 2.;
             let obstacle_radius = obstacle.size / 2.;
             if distance < brick_radius + obstacle_radius {
-                let shift_vector = brick_position - obstacle_position;
-                let shift_distance = brick_radius + obstacle_radius - distance;
-                let shift = shift_vector.normalize() * shift_distance;
-
-                brick_transform.translation.x += shift.x;
-                brick_transform.translation.y += shift.y;
-                brick.vel_y = -1.0;
+                if distance > 0.0 {  // Avoid NaN issues
+                    let shift_vector = (brick_position - obstacle_position).normalize();
+                    //let shift_distance = (brick_radius + obstacle_radius - distance) / 2.0; // Dampening effect
+                    let shift_distance = brick_radius + obstacle_radius - distance; // Full push instead of half
+                    brick_transform.translation += shift_vector * shift_distance;
+                    obstacle_transform.translation -= shift_vector * shift_distance;
+                    //brick.vel_y = -1.0;
+                }
+                
             }
         }
     }
@@ -155,7 +157,6 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-/// graph traversal ??
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
@@ -195,14 +196,15 @@ pub fn check_touching(
                     let obstacle_position = obstacle_transform.translation;
 
                     let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 1.7;
-                    let obstacle_radius = obstacle.size / 1.7;
+                    let brick_radius = brick.size / 1.5;
+                    let obstacle_radius = obstacle.size / 1.5;
 
                     if distance < brick_radius + obstacle_radius
-                        && brick.brick_type == obstacle.brick_type
                     {
-                        visited.insert(obstacle.id);
-                        queue.push_back(obstacle.id);
+                        if brick.brick_type == obstacle.brick_type {
+                            visited.insert(obstacle.id);
+                            queue.push_back(obstacle.id);
+                        }
                     }
                 }
             }
@@ -264,7 +266,7 @@ pub fn spawn_brick(
     let mut random_brick = 1;
     let mut random_brick_gen = generate_random_int(1..5);
     for mut mouse_pos in query.iter_mut() {
-        mouse_x = mouse_pos.x;
+        mouse_x = mouse_pos.x + (generate_random_int(-2..3)) as f32;
         mouse_y = mouse_pos.y;
         clicked = mouse_pos.clicked;
         random_brick = mouse_pos.next_random_brick;

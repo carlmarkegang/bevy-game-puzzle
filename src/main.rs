@@ -19,12 +19,12 @@ fn main() {
             (
                 setupcamera::fit_canvas,
                 cursor_events,
-                setupbrick::set_pos_compare_brick,
             ),
         )
         .add_systems(
             FixedUpdate,
             (
+                setupbrick::set_pos_compare_brick,
                 setupbrick::time_still_check,
                 setupbrick::collision_check_brick,
                 setupbrick::brick_movements,
@@ -225,7 +225,7 @@ fn cursor_events(
     for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
         if i == mouse_pos.next_random_brick {
             mouse_transform.translation.z = 50.;
-            if mouse_pos.time_from_clicked > 400. {
+            if mouse_pos.time_from_clicked > 100. {
                 mouse_transform.translation.y = 100.0;
             }
         }
@@ -234,7 +234,7 @@ fn cursor_events(
 
     if buttons.just_pressed(MouseButton::Left) {
         for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            if mouse_pos.time_from_clicked > 400. {
+            if mouse_pos.time_from_clicked > 100. {
                 mouse_pos.clicked = true;
                 mouse_pos.time_from_clicked = 0.0;
             }
