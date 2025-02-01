@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::{generate_random_int, setupcamera, MousePos};
 use bevy::prelude::*;
@@ -142,55 +142,61 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
+
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
     let mut to_delete_list: Vec<i32> = Vec::new();
+    let mut connections: HashMap<i32, Vec<i32>> = HashMap::new();
 
     for (brick_transform, brick) in query_brick.iter_mut() {
-        let mut visited = HashSet::new();
-        let mut queue: VecDeque<i32> = VecDeque::new();
-        let mut cluster_size = 0;
+        for (obstacle_transform, obstacle) in query_brick_compare.iter() {
+            let brick_position = brick_transform.translation;
+            let obstacle_position = obstacle_transform.translation;
 
-        queue.push_back(brick.id);
-        visited.insert(brick.id);
+            let distance = brick_position.distance(obstacle_position);
+            let brick_radius = brick.size / 1.9;
+            let obstacle_radius = obstacle.size / 1.9;
 
-        while let Some(current_id) = queue.pop_front() {
-            for (obstacle_transform, obstacle) in query_brick_compare.iter() {
-                if visited.contains(&obstacle.id) {
-                    continue;
-                }
-
-                let brick_position = brick_transform.translation;
-                let obstacle_position = obstacle_transform.translation;
-
-                let distance = brick_position.distance(obstacle_position);
-                let brick_radius = brick.size / 1.9;
-                let obstacle_radius = obstacle.size / 1.9;
-
-                if distance < brick_radius + obstacle_radius {
-                    if brick.brick_type == obstacle.brick_type {
-                        let mut was_added = false;
-                        if !visited.contains(&brick.id) {
-                            visited.insert(brick.id);
-                            cluster_size += 1;
-                        }
-                        if !visited.contains(&obstacle.id) {
-                            visited.insert(obstacle.id);
-                            cluster_size += 1;
-                        }
-                        queue.push_back(obstacle.id);
-                        if cluster_size >= 1 {
-                        println!("cluster_size: {}", cluster_size);  
-                        }
-                    }
-                }
+            if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type {
+                connections.entry(brick.id).or_default().push(obstacle.id);
+                connections.entry(obstacle.id).or_default().push(brick.id); // Bidirectional connection
             }
         }
+    }
+
+    // DFS function to explore the graph
+    fn dfs(
+        id: i32,
+        connections: &HashMap<i32, Vec<i32>>,
+        visited: &mut HashSet<i32>,
+        cluster_size: &mut usize,
+    ) {
+        if visited.contains(&id) {
+            return;
+        }
+        visited.insert(id);
+        *cluster_size += 1;
+
+        if let Some(neighbors) = connections.get(&id) {
+            for &neighbor in neighbors {
+                dfs(neighbor, connections, visited, cluster_size);
+            }
+        }
+    }
+
+    // Traverse each brick
+    for (brick_transform, brick) in query_brick.iter_mut() {
+
+        let mut visited = HashSet::new();
+        let mut cluster_size = 0;
+
+        dfs(brick.id, &connections, &mut visited, &mut cluster_size);
+
 
         // If the cluster is big enough, mark all bricks in it for deletion
-        if cluster_size >= 3 {
+        if cluster_size >= 4 {
             to_delete_list.extend(visited);
         }
     }
