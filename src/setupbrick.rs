@@ -154,9 +154,9 @@ pub fn check_touching(
         let mut cluster_size = 0;
 
         // If the brick is already checked, skip
-        if visited.contains(&brick.id) {
-            continue;
-        }
+        //if visited.contains(&brick.id) {
+        //    continue;
+        //}
 
         queue.push_back(brick.id);
         visited.insert(brick.id);
@@ -278,7 +278,7 @@ pub fn spawn_brick(
             }
         }
 
-        println!("brick_next_id: {}", brick_next_id);
+        //println!("brick_next_id: {}", brick_next_id);
 
         let random_brick_type = random_brick;
         let mut color_r = generate_random_int(0..100) as f32 / 100.0;
