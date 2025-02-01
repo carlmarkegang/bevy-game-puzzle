@@ -6,7 +6,6 @@
  * For web: cargo run --target wasm32-unknown-unknown 
  * Remove dependancys and lock file: cargo clean
  * cargo build --release
- * cargo build --release --target wasm32-unknown-unknown
  * cargo fix  - Auto clean project
  * Clear-History
 

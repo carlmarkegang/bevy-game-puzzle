@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 
 use crate::{generate_random_int, setupcamera, MousePos};
-use bevy::{prelude::*, text::cosmic_text::ttf_parser::Width};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Brick {
@@ -30,9 +30,9 @@ const MAX_BRICKS: i32 = 20;
 pub const BRICK_SIZE: f32 = 20.;
 
 pub fn setup_brick(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     // Brick
@@ -73,7 +73,7 @@ pub fn collision_check_brick(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+        for (obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
             if obstacle.id == brick.id {
                 continue;
             }
@@ -125,7 +125,7 @@ pub fn set_pos_compare_brick(
 }
 
 pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_transform, mut brick) in query_brick.iter_mut() {
         let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
         let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
         //let rounded_x = (brick_transform.translation.x).round();
@@ -144,11 +144,11 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
 
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
-    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
+    query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
     let mut to_delete_list: Vec<i32> = Vec::new();
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_transform, brick) in query_brick.iter_mut() {
         let mut visited = HashSet::new();
         let mut queue: VecDeque<i32> = VecDeque::new();
         let mut cluster_size = 0;
@@ -191,7 +191,7 @@ pub fn check_touching(
         }
     }
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_transform, mut brick) in query_brick.iter_mut() {
         if to_delete_list.contains(&brick.id) {
             brick.to_delete = 1;
         }
@@ -204,9 +204,9 @@ pub fn delete_touching(
     mut commands: Commands,
 ) {
     let mut was_deleted = false;
-    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_entity, brick_transform, brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in
+            for (brick_entity_compare, brick_transform_compare, brick_compare) in
                 query_brick_compare.iter_mut()
             {
                 if brick_compare.id == brick.id {
@@ -220,7 +220,7 @@ pub fn delete_touching(
     }
 
     // Unlock everything after remove
-    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_entity, brick_transform, mut brick) in query_brick.iter_mut() {
         if was_deleted == true {
             brick.time_still = 0.;
         }
@@ -253,7 +253,7 @@ pub fn spawn_brick(
     let mut mouse_y = 0.0;
     let mut clicked = false;
     let mut random_brick = 1;
-    let mut random_brick_gen = generate_random_int(1..5);
+    let random_brick_gen = generate_random_int(1..5);
     for mut mouse_pos in query.iter_mut() {
         mouse_x = mouse_pos.x + (generate_random_int(-4..5)) as f32;
         mouse_y = mouse_pos.y;
@@ -269,7 +269,7 @@ pub fn spawn_brick(
     if clicked == true {
         let mut brick_amount = 0;
 
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+        for (brick_transform, brick) in query_brick.iter_mut() {
             brick_amount += 1;
         }
 
