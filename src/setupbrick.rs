@@ -15,7 +15,7 @@ pub struct Brick {
     pub time_still_move_y: f32,
     pub to_delete: i32,
     pub victory: bool,
-    pub set_victory_text: bool
+    pub set_victory_text: bool,
 }
 
 #[derive(Component)]
@@ -178,6 +178,9 @@ pub fn check_touching(
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
+                        if !visited.contains(&brick.id) {
+                            visited.insert(brick.id);
+                        }
                         visited.insert(obstacle.id);
                         queue.push_back(obstacle.id);
                     }
@@ -230,7 +233,7 @@ pub fn delete_touching(
                 Text::new("Victory!"),
                 Node {
                     position_type: PositionType::Absolute,
-                    top: Val::Px((setupcamera::RES_WIDTH / 2) as f32 ),
+                    top: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
                     left: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
                     ..default()
                 },
@@ -267,11 +270,15 @@ pub fn spawn_brick(
         }
     }
     if clicked == true {
-        let mut brick_amount = 0;
+        let mut brick_next_id = 0;
 
         for (brick_transform, brick) in query_brick.iter_mut() {
-            brick_amount += 1;
+            if brick_next_id <= brick.id {
+                brick_next_id = brick.id + 1;
+            }
         }
+
+        println!("brick_next_id: {}", brick_next_id);
 
         let random_brick_type = random_brick;
         let mut color_r = generate_random_int(0..100) as f32 / 100.0;
@@ -308,7 +315,7 @@ pub fn spawn_brick(
             Transform::from_translation(Vec3::new(mouse_x as f32, 100.0, 10.0))
                 .with_scale(Vec2::splat(BRICK_SIZE).extend(1.)),
             Brick {
-                id: brick_amount,
+                id: brick_next_id,
                 brick_type: random_brick_type,
                 vel_x: 0.0,
                 vel_y: 0.0,
@@ -318,7 +325,7 @@ pub fn spawn_brick(
                 time_still_move_y: 0.0,
                 to_delete: 0,
                 victory: false,
-                set_victory_text: false
+                set_victory_text: false,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
@@ -327,15 +334,13 @@ pub fn spawn_brick(
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
             Transform::from_translation(Vec3::new(mouse_x, 100., 10.0))
-                .with_scale(Vec2::splat(0.).extend(1.0)),
+                .with_scale(Vec2::splat(BRICK_SIZE / 2.0).extend(1.0)),
             BrickCompare {
-                id: brick_amount,
+                id: brick_next_id,
                 brick_type: random_brick_type,
                 size: BRICK_SIZE,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
-
-        clicked = false;
     }
 }
