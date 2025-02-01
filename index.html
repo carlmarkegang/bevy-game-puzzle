@@ -1,23 +1,25 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Bevy Game</title>
+    <style>
+        body {
+            background-color: #2b2c2f;
+            text-align: center;
+        }
+    </style>
 </head>
-<body>
-    <h1>Bevy Game in the Browser</h1>
 
-    <script>
-        // Assuming 'game.js' is the JS loader that loads the wasm file
-        WebAssembly.instantiateStreaming(fetch('game.wasm'))
-            .then(obj => {
-                // Here you would start the game after loading
-                obj.instance.exports.start();  // Or whatever function starts your game
-            })
-            .catch(e => console.error("Error loading WebAssembly", e));
+<body style="margin: 0px;">
+    <script type="module">
+        import init from './mygame.js'
+
+        init().catch((error) => {
+            if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+                throw error;
+            }
+        });
     </script>
-
-    <!-- Optionally, include other assets (like a canvas element or styles) -->
 </body>
+
 </html>
