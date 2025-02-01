@@ -153,17 +153,10 @@ pub fn check_touching(
         let mut queue: VecDeque<i32> = VecDeque::new();
         let mut cluster_size = 0;
 
-        // If the brick is already checked, skip
-        //if visited.contains(&brick.id) {
-        //    continue;
-        //}
-
         queue.push_back(brick.id);
         visited.insert(brick.id);
 
         while let Some(current_id) = queue.pop_front() {
-            cluster_size += 1;
-
             for (obstacle_transform, obstacle) in query_brick_compare.iter() {
                 if visited.contains(&obstacle.id) {
                     continue;
@@ -178,18 +171,26 @@ pub fn check_touching(
 
                 if distance < brick_radius + obstacle_radius {
                     if brick.brick_type == obstacle.brick_type {
+                        let mut was_added = false;
                         if !visited.contains(&brick.id) {
                             visited.insert(brick.id);
+                            cluster_size += 1;
                         }
-                        visited.insert(obstacle.id);
+                        if !visited.contains(&obstacle.id) {
+                            visited.insert(obstacle.id);
+                            cluster_size += 1;
+                        }
                         queue.push_back(obstacle.id);
+                        if cluster_size >= 1 {
+                        println!("cluster_size: {}", cluster_size);  
+                        }
                     }
                 }
             }
         }
 
         // If the cluster is big enough, mark all bricks in it for deletion
-        if cluster_size >= 4 {
+        if cluster_size >= 3 {
             to_delete_list.extend(visited);
         }
     }
@@ -225,9 +226,10 @@ pub fn delete_touching(
     // Unlock everything after remove
     for (brick_entity, brick_transform, mut brick) in query_brick.iter_mut() {
         if was_deleted == true {
-            brick.time_still = 0.;
+           // brick.time_still = 0.;
         }
 
+        // Display win message
         if brick.victory == true && brick.set_victory_text == false {
             commands.spawn((
                 Text::new("Victory!"),
@@ -334,7 +336,7 @@ pub fn spawn_brick(
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
             Transform::from_translation(Vec3::new(mouse_x, 100., 10.0))
-                .with_scale(Vec2::splat(BRICK_SIZE / 2.0).extend(1.0)),
+                .with_scale(Vec2::splat(5.0).extend(1.0)),
             BrickCompare {
                 id: brick_next_id,
                 brick_type: random_brick_type,
