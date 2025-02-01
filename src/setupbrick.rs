@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::{generate_random_int, setupcamera, MousePos};
+use crate::{generate_random_int, setupcamera, MousePos, PointsText};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -14,8 +14,8 @@ pub struct Brick {
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
     pub to_delete: i32,
-    pub victory: bool,
-    pub set_victory_text: bool,
+    pub game_lost: bool,
+    pub set_game_lost_text: bool,
 }
 
 #[derive(Component)]
@@ -84,7 +84,7 @@ pub fn collision_check_brick(
                 brick_transform.translation.x = brick.time_still_move_x;
                 brick_transform.translation.y = brick.time_still_move_y;
                 if brick.time_still_move_y > 80.0 {
-                    brick.victory = true;
+                    brick.game_lost = true;
                 }
                 continue;
             }
@@ -142,7 +142,6 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
@@ -159,7 +158,8 @@ pub fn check_touching(
             let brick_radius = brick.size / 1.9;
             let obstacle_radius = obstacle.size / 1.9;
 
-            if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type {
+            if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type
+            {
                 connections.entry(brick.id).or_default().push(obstacle.id);
                 connections.entry(obstacle.id).or_default().push(brick.id); // Bidirectional connection
             }
@@ -188,12 +188,10 @@ pub fn check_touching(
 
     // Traverse each brick
     for (brick_transform, brick) in query_brick.iter_mut() {
-
         let mut visited = HashSet::new();
         let mut cluster_size = 0;
 
         dfs(brick.id, &connections, &mut visited, &mut cluster_size);
-
 
         // If the cluster is big enough, mark all bricks in it for deletion
         if cluster_size >= 4 {
@@ -212,6 +210,7 @@ pub fn delete_touching(
     mut query_brick: Query<(Entity, &mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(Entity, &mut Transform, &mut BrickCompare), Without<Brick>>,
     mut commands: Commands,
+    mut textquery: Query<(&mut Text, &mut PointsText)>,
 ) {
     let mut was_deleted = false;
     for (brick_entity, brick_transform, brick) in query_brick.iter_mut() {
@@ -229,16 +228,22 @@ pub fn delete_touching(
         }
     }
 
-    // Unlock everything after remove
     for (brick_entity, brick_transform, mut brick) in query_brick.iter_mut() {
         if was_deleted == true {
-           // brick.time_still = 0.;
+            // Unlock everything after remove
+            // brick.time_still = 0.;
+
+            if brick.game_lost == false {
+                for (mut span, mut points_text) in textquery.iter_mut() {
+                    points_text.points += 500;
+                }
+            }
         }
 
         // Display win message
-        if brick.victory == true && brick.set_victory_text == false {
+        if brick.game_lost == true && brick.set_game_lost_text == false {
             commands.spawn((
-                Text::new("Victory!"),
+                Text::new("Sorry you lost!"),
                 Node {
                     position_type: PositionType::Absolute,
                     top: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
@@ -247,7 +252,7 @@ pub fn delete_touching(
                 },
                 setupcamera::PIXEL_PERFECT_LAYERS,
             ));
-            brick.set_victory_text = true;
+            brick.set_game_lost_text = true;
         }
     }
 }
@@ -332,8 +337,8 @@ pub fn spawn_brick(
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
                 to_delete: 0,
-                victory: false,
-                set_victory_text: false,
+                game_lost: false,
+                set_game_lost_text: false,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));

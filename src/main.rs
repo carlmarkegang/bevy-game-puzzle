@@ -14,13 +14,7 @@ fn main() {
                 setupbrick::setup_brick,
             ),
         )
-        .add_systems(
-            Update,
-            (
-                setupcamera::fit_canvas,
-                cursor_events,
-            ),
-        )
+        .add_systems(Update, (setupcamera::fit_canvas, cursor_events))
         .add_systems(
             FixedUpdate,
             (
@@ -33,6 +27,7 @@ fn main() {
                 setupbrick::delete_touching,
                 setupbrick::spawn_brick,
                 backgroundpixles_movement,
+                update_point_text,
             )
                 .chain(),
         )
@@ -49,6 +44,11 @@ struct MousePos {
     clicked: bool,
     next_random_brick: i32,
     time_from_clicked: f32,
+}
+
+#[derive(Component)]
+struct PointsText {
+    points: i32,
 }
 
 fn setup_main(
@@ -168,8 +168,7 @@ fn setup_main(
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::default())),
         MeshMaterial2d(materials.add(Color::srgb(1.0, 0.4, 0.4))),
-        Transform::from_xyz(0 as f32, 80. as f32, 20.)
-        .with_scale(Vec3::new(120.0, 1.0, 20.0)),
+        Transform::from_xyz(0 as f32, 80. as f32, 20.).with_scale(Vec3::new(120.0, 1.0, 20.0)),
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
@@ -186,6 +185,25 @@ fn setup_main(
             Backgroundpixles,
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
+    }
+
+    commands.spawn((
+        Text::new("Points: 0"),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(12.),
+            left: Val::Px(12.),
+            ..default()
+        },
+        PointsText { points: 0 },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+}
+
+fn update_point_text(mut textquery: Query<(&mut Text, &PointsText)>) {
+    for (mut span, points_text) in textquery.iter_mut() {
+        let value = format!("Points: {}", points_text.points);
+        **span = format!("{value}");
     }
 }
 
