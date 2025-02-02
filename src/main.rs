@@ -49,6 +49,7 @@ struct MousePos {
 #[derive(Component)]
 struct PointsText {
     points: i32,
+    difficulty: i32
 }
 
 fn setup_main(
@@ -64,6 +65,21 @@ fn setup_main(
         clicked: false,
     });
      */
+
+     commands.spawn((
+        Text::new("Points: 0"),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(12.),
+            left: Val::Px(12.),
+            ..default()
+        },
+        PointsText { 
+            points: 0,
+            difficulty: 2 
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
 
     let mut gen_next_random_brick = 1;
     let mut color_r = generate_random_int(0..100) as f32 / 100.0;
@@ -156,6 +172,28 @@ fn setup_main(
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
+    gen_next_random_brick = 5;
+    if gen_next_random_brick == 5 {
+        color_r = 0.72;
+        color_g = 0.02;
+        color_b = 1.00;
+    }
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0,
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
     // Background pixels
 
     commands.spawn((
@@ -187,23 +225,28 @@ fn setup_main(
         ));
     }
 
-    commands.spawn((
-        Text::new("Points: 0"),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(12.),
-            left: Val::Px(12.),
-            ..default()
-        },
-        PointsText { points: 0 },
-        setupcamera::PIXEL_PERFECT_LAYERS,
-    ));
+
 }
 
-fn update_point_text(mut textquery: Query<(&mut Text, &PointsText)>) {
-    for (mut span, points_text) in textquery.iter_mut() {
+fn update_point_text(mut textquery: Query<(&mut Text, &mut PointsText)>) {
+    for (mut span, mut points_text) in textquery.iter_mut() {
         let value = format!("Points: {}", points_text.points);
         **span = format!("{value}");
+
+        if points_text.points > 2000 {
+            points_text.difficulty = 3;
+        }
+       
+        if points_text.points > 5000 {
+            points_text.difficulty = 4;
+        }
+        if points_text.points > 10000 {
+            points_text.difficulty = 5;
+        }
+        if points_text.points > 20000 {
+            points_text.difficulty = 6;
+        }
+
     }
 }
 
@@ -251,7 +294,7 @@ fn cursor_events(
     for (mut mouse_transform, mouse_pos) in query.iter_mut() {
         if i == mouse_pos.next_random_brick {
             mouse_transform.translation.z = 50.;
-            if mouse_pos.time_from_clicked > 400. {
+            if mouse_pos.time_from_clicked > 300. {
                 mouse_transform.translation.y = 100.0;
             }
         }
@@ -260,7 +303,7 @@ fn cursor_events(
 
     if buttons.just_pressed(MouseButton::Left) {
         for (mouse_transform, mut mouse_pos) in query.iter_mut() {
-            if mouse_pos.time_from_clicked > 400. {
+            if mouse_pos.time_from_clicked > 300. {
                 mouse_pos.clicked = true;
                 mouse_pos.time_from_clicked = 0.0;
             }

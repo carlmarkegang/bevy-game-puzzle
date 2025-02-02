@@ -264,12 +264,23 @@ pub fn spawn_brick(
     asset_server: Res<AssetServer>,
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query: Query<&mut MousePos>,
+    mut textquery: Query<&mut PointsText>,
 ) {
     let mut mouse_x = 0.0;
     let mut mouse_y = 0.0;
     let mut clicked = false;
     let mut random_brick = 1;
-    let random_brick_gen = generate_random_int(1..5);
+
+    // Get difficulty
+    let mut current_difficulty = 2;
+    for (points_text) in textquery.iter_mut() {
+        //println!("current_difficulty: {}", current_difficulty);
+        current_difficulty = points_text.difficulty;
+       
+    }
+    let random_brick_gen = generate_random_int(1..current_difficulty);
+
+
     for mut mouse_pos in query.iter_mut() {
         mouse_x = mouse_pos.x + (generate_random_int(-4..5)) as f32;
         mouse_y = mouse_pos.y;
@@ -320,6 +331,12 @@ pub fn spawn_brick(
             color_r = 0.0;
             color_g = 0.30;
             color_b = 0.25;
+        }
+
+        if random_brick_type == 5 {
+            color_r = 0.72;
+            color_g = 0.02;
+            color_b = 1.00;
         }
 
         commands.spawn((
