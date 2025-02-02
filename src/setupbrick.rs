@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use crate::{generate_random_int, setupcamera, MousePos, PointsText};
 use bevy::prelude::*;
@@ -234,7 +234,7 @@ pub fn delete_touching(
             // brick.time_still = 0.;
 
             if brick.game_lost == false {
-                for (mut span, mut points_text) in textquery.iter_mut() {
+                for (span, mut points_text) in textquery.iter_mut() {
                     points_text.points += 500;
                 }
             }
@@ -273,7 +273,7 @@ pub fn spawn_brick(
 
     // Get difficulty
     let mut current_difficulty = 2;
-    for (points_text) in textquery.iter_mut() {
+    for points_text in textquery.iter_mut() {
         //println!("current_difficulty: {}", current_difficulty);
         current_difficulty = points_text.difficulty;
        
