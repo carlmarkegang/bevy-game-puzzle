@@ -1,4 +1,6 @@
 # bevy-game-puzzle 
+Click here to play: https://swedishbacon.itch.io/gravity-falling-matching-four-bevy-game
+
 
 ## Commands
  * Setup new folder: cd bevy_game_creature + cargo init + cargo add bevy
