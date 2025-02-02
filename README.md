@@ -6,9 +6,16 @@
  * For web: cargo run --target wasm32-unknown-unknown 
  * Remove dependancys and lock file: cargo clean
  * cargo build --release
- * cargo build --release --target wasm32-unknown-unknown
  * cargo fix  - Auto clean project
  * Clear-History
+
+## Web build for release
+ * rustup target add wasm32-unknown-unknown
+ * cargo install wasm-bindgen-cli
+ * cargo build --target wasm32-unknown-unknown --profile wasm-release
+ * Build will land in: target/wasm32-unknown-unknown/wasm-release/
+ * wasm-bindgen --no-typescript --target web --out-dir ./out/ --out-name "mygame" ./target/wasm32-unknown-unknown/wasm-release/bevy-game-puzzle.wasm
+ * The final list of files for a minimal website will look something like this:: assets/ index.html mygame.js mygame_bg.wasm
 
 ## install web
  * rustup target install wasm32-unknown-unknown

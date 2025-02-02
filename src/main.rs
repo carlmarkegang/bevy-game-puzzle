@@ -14,17 +14,11 @@ fn main() {
                 setupbrick::setup_brick,
             ),
         )
-        .add_systems(
-            Update,
-            (
-                setupcamera::fit_canvas,
-                cursor_events,
-                setupbrick::set_pos_compare_brick,
-            ),
-        )
+        .add_systems(Update, (setupcamera::fit_canvas, cursor_events))
         .add_systems(
             FixedUpdate,
             (
+                setupbrick::set_pos_compare_brick,
                 setupbrick::time_still_check,
                 setupbrick::collision_check_brick,
                 setupbrick::brick_movements,
@@ -33,6 +27,7 @@ fn main() {
                 setupbrick::delete_touching,
                 setupbrick::spawn_brick,
                 backgroundpixles_movement,
+                update_point_text,
             )
                 .chain(),
         )
@@ -51,6 +46,12 @@ struct MousePos {
     time_from_clicked: f32,
 }
 
+#[derive(Component)]
+struct PointsText {
+    points: i32,
+    difficulty: i32
+}
+
 fn setup_main(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -64,6 +65,21 @@ fn setup_main(
         clicked: false,
     });
      */
+
+     commands.spawn((
+        Text::new("Points: 0"),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(12.),
+            left: Val::Px(12.),
+            ..default()
+        },
+        PointsText { 
+            points: 0,
+            difficulty: 2 
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
 
     let mut gen_next_random_brick = 1;
     let mut color_r = generate_random_int(0..100) as f32 / 100.0;
@@ -156,12 +172,41 @@ fn setup_main(
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
+    gen_next_random_brick = 5;
+    if gen_next_random_brick == 5 {
+        color_r = 0.72;
+        color_g = 0.02;
+        color_b = 1.00;
+    }
+
+    commands.spawn((
+        Mesh2d(meshes.add(Circle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
+        Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_scale(Vec2::splat(setupbrick::BRICK_SIZE).extend(1.)),
+        MousePos {
+            x: 0.0,
+            y: 0.0,
+            clicked: false,
+            next_random_brick: gen_next_random_brick,
+            time_from_clicked: 0.0,
+        },
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
     // Background pixels
 
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::default())),
         MeshMaterial2d(materials.add(Color::srgb(0.1, 0.1, 0.2))),
         Transform::from_xyz(0 as f32, 0 as f32, 2.).with_scale(Vec3::new(120.0, 185.0, 0.0)),
+        setupcamera::PIXEL_PERFECT_LAYERS,
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::default())),
+        MeshMaterial2d(materials.add(Color::srgb(1.0, 0.4, 0.4))),
+        Transform::from_xyz(0 as f32, 80. as f32, 20.).with_scale(Vec3::new(120.0, 1.0, 20.0)),
         setupcamera::PIXEL_PERFECT_LAYERS,
     ));
 
@@ -178,6 +223,30 @@ fn setup_main(
             Backgroundpixles,
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
+    }
+
+
+}
+
+fn update_point_text(mut textquery: Query<(&mut Text, &mut PointsText)>) {
+    for (mut span, mut points_text) in textquery.iter_mut() {
+        let value = format!("Points: {}", points_text.points);
+        **span = format!("{value}");
+
+        if points_text.points > 2000 {
+            points_text.difficulty = 3;
+        }
+       
+        if points_text.points > 5000 {
+            points_text.difficulty = 4;
+        }
+        if points_text.points > 10000 {
+            points_text.difficulty = 5;
+        }
+        if points_text.points > 20000 {
+            points_text.difficulty = 6;
+        }
+
     }
 }
 
@@ -222,10 +291,10 @@ fn cursor_events(
     }
 
     let mut i = 1;
-    for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
+    for (mut mouse_transform, mouse_pos) in query.iter_mut() {
         if i == mouse_pos.next_random_brick {
             mouse_transform.translation.z = 50.;
-            if mouse_pos.time_from_clicked > 400. {
+            if mouse_pos.time_from_clicked > 300. {
                 mouse_transform.translation.y = 100.0;
             }
         }
@@ -233,8 +302,8 @@ fn cursor_events(
     }
 
     if buttons.just_pressed(MouseButton::Left) {
-        for (mut mouse_transform, mut mouse_pos) in query.iter_mut() {
-            if mouse_pos.time_from_clicked > 400. {
+        for (mouse_transform, mut mouse_pos) in query.iter_mut() {
+            if mouse_pos.time_from_clicked > 300. {
                 mouse_pos.clicked = true;
                 mouse_pos.time_from_clicked = 0.0;
             }

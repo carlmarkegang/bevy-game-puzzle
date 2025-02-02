@@ -1,6 +1,6 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
-use crate::{generate_random_int, setupcamera, MousePos};
+use crate::{generate_random_int, setupcamera, MousePos, PointsText};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -14,6 +14,8 @@ pub struct Brick {
     pub time_still_move_x: f32,
     pub time_still_move_y: f32,
     pub to_delete: i32,
+    pub game_lost: bool,
+    pub set_game_lost_text: bool,
 }
 
 #[derive(Component)]
@@ -28,9 +30,9 @@ const MAX_BRICKS: i32 = 20;
 pub const BRICK_SIZE: f32 = 20.;
 
 pub fn setup_brick(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     // Brick
@@ -71,7 +73,7 @@ pub fn collision_check_brick(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
     for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        for (mut obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
+        for (obstacle_transform, obstacle) in query_brick_compare.iter_mut() {
             if obstacle.id == brick.id {
                 continue;
             }
@@ -81,6 +83,9 @@ pub fn collision_check_brick(
                 brick.vel_x = 0.0;
                 brick_transform.translation.x = brick.time_still_move_x;
                 brick_transform.translation.y = brick.time_still_move_y;
+                if brick.time_still_move_y > 80.0 {
+                    brick.game_lost = true;
+                }
                 continue;
             }
 
@@ -91,13 +96,16 @@ pub fn collision_check_brick(
             let brick_radius = brick.size / 2.;
             let obstacle_radius = obstacle.size / 2.;
             if distance < brick_radius + obstacle_radius {
-                let shift_vector = brick_position - obstacle_position;
-                let shift_distance = brick_radius + obstacle_radius - distance;
-                let shift = shift_vector.normalize() * shift_distance;
-
-                brick_transform.translation.x += shift.x;
-                brick_transform.translation.y += shift.y;
-                brick.vel_y = -1.0;
+                if distance > 0.0 {
+                    // Avoid NaN issues
+                    let shift_vector = (brick_position - obstacle_position).normalize();
+                    //let shift_distance = (brick_radius + obstacle_radius - distance) / 2.0; // Dampening effect
+                    let shift_distance = brick_radius + obstacle_radius - distance; // Full push instead of half
+                    brick_transform.translation.x += shift_vector.x * shift_distance;
+                    brick_transform.translation.y += shift_vector.y * shift_distance;
+                    //obstacle_transform.translation -= shift_vector * shift_distance;
+                    //brick.vel_y = -1.0;
+                }
             }
         }
     }
@@ -106,43 +114,22 @@ pub fn collision_check_brick(
 pub fn set_pos_compare_brick(
     mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare)>,
     query_brick: Query<(&mut Transform, &mut Brick), Without<BrickCompare>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for (brick_transform, brick) in query_brick.iter() {
-        let mut found_compare = false;
         for (mut brick_transform_compare, brick_compare) in query_brick_compare.iter_mut() {
             if brick_compare.id == brick.id {
                 brick_transform_compare.translation = brick_transform.translation;
-                found_compare = true;
             }
-        }
-        if found_compare == false {
-            // Doesn't seem to happen
-            println!("FOUND FALSE");
-            commands.spawn((
-                Mesh2d(meshes.add(Circle::default())),
-                MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-                Transform::from_translation(Vec3::new(0., 100., 50.0))
-                    .with_scale(Vec2::splat(5.0).extend(1.)),
-                BrickCompare {
-                    id: brick.id,
-                    brick_type: brick.brick_type,
-                    size: BRICK_SIZE,
-                },
-                setupcamera::PIXEL_PERFECT_LAYERS,
-            ));
         }
     }
 }
 
 pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        //let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
-        //let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
-        let rounded_x = (brick_transform.translation.x).round();
-        let rounded_y = (brick_transform.translation.y).round();
+    for (brick_transform, mut brick) in query_brick.iter_mut() {
+        let rounded_x = (brick_transform.translation.x * 10.0).round() / 10.0;
+        let rounded_y = (brick_transform.translation.y * 10.0).round() / 10.0;
+        //let rounded_x = (brick_transform.translation.x).round();
+        //let rounded_y = (brick_transform.translation.y).round();
 
         if rounded_x == brick.time_still_move_x && rounded_y == brick.time_still_move_y {
             brick.time_still += 1.0;
@@ -155,66 +142,64 @@ pub fn time_still_check(mut query_brick: Query<(&mut Transform, &mut Brick)>) {
     }
 }
 
-/// graph traversal ??
 pub fn check_touching(
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
-    mut query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
+    query_brick_compare: Query<(&mut Transform, &mut BrickCompare), Without<Brick>>,
 ) {
-    let mut current_id = 0;
     let mut to_delete_list: Vec<i32> = Vec::new();
-    let mut brick_amount = 0;
+    let mut connections: HashMap<i32, Vec<i32>> = HashMap::new();
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-        brick_amount += 1;
-    }
+    for (brick_transform, brick) in query_brick.iter_mut() {
+        for (obstacle_transform, obstacle) in query_brick_compare.iter() {
+            let brick_position = brick_transform.translation;
+            let obstacle_position = obstacle_transform.translation;
 
-    for _i in 0..brick_amount {
-        current_id = _i;
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            let mut visited = HashSet::new();
-            let mut queue: VecDeque<i32> = VecDeque::new();
-            let mut cluster_size = 0;
+            let distance = brick_position.distance(obstacle_position);
+            let brick_radius = brick.size / 1.9;
+            let obstacle_radius = obstacle.size / 1.9;
 
-            // If the brick is already checked, skip
-            if visited.contains(&brick.id) {
-                continue;
-            }
-
-            queue.push_back(brick.id);
-            visited.insert(brick.id);
-
-            while let Some(current_id) = queue.pop_front() {
-                cluster_size += 1;
-
-                for (obstacle_transform, obstacle) in query_brick_compare.iter() {
-                    if visited.contains(&obstacle.id) {
-                        continue;
-                    }
-
-                    let brick_position = brick_transform.translation;
-                    let obstacle_position = obstacle_transform.translation;
-
-                    let distance = brick_position.distance(obstacle_position);
-                    let brick_radius = brick.size / 1.7;
-                    let obstacle_radius = obstacle.size / 1.7;
-
-                    if distance < brick_radius + obstacle_radius
-                        && brick.brick_type == obstacle.brick_type
-                    {
-                        visited.insert(obstacle.id);
-                        queue.push_back(obstacle.id);
-                    }
-                }
-            }
-
-            // If the cluster is big enough, mark all bricks in it for deletion
-            if cluster_size >= 4 {
-                to_delete_list.extend(visited);
+            if distance < brick_radius + obstacle_radius && brick.brick_type == obstacle.brick_type
+            {
+                connections.entry(brick.id).or_default().push(obstacle.id);
+                connections.entry(obstacle.id).or_default().push(brick.id); // Bidirectional connection
             }
         }
     }
 
-    for (mut brick_transform, mut brick) in query_brick.iter_mut() {
+    // DFS function to explore the graph
+    fn dfs(
+        id: i32,
+        connections: &HashMap<i32, Vec<i32>>,
+        visited: &mut HashSet<i32>,
+        cluster_size: &mut usize,
+    ) {
+        if visited.contains(&id) {
+            return;
+        }
+        visited.insert(id);
+        *cluster_size += 1;
+
+        if let Some(neighbors) = connections.get(&id) {
+            for &neighbor in neighbors {
+                dfs(neighbor, connections, visited, cluster_size);
+            }
+        }
+    }
+
+    // Traverse each brick
+    for (brick_transform, brick) in query_brick.iter_mut() {
+        let mut visited = HashSet::new();
+        let mut cluster_size = 0;
+
+        dfs(brick.id, &connections, &mut visited, &mut cluster_size);
+
+        // If the cluster is big enough, mark all bricks in it for deletion
+        if cluster_size >= 4 {
+            to_delete_list.extend(visited);
+        }
+    }
+
+    for (brick_transform, mut brick) in query_brick.iter_mut() {
         if to_delete_list.contains(&brick.id) {
             brick.to_delete = 1;
         }
@@ -225,11 +210,12 @@ pub fn delete_touching(
     mut query_brick: Query<(Entity, &mut Transform, &mut Brick)>,
     mut query_brick_compare: Query<(Entity, &mut Transform, &mut BrickCompare), Without<Brick>>,
     mut commands: Commands,
+    mut textquery: Query<(&mut Text, &mut PointsText)>,
 ) {
     let mut was_deleted = false;
-    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_entity, brick_transform, brick) in query_brick.iter_mut() {
         if brick.to_delete == 1 {
-            for (brick_entity_compare, mut brick_transform_compare, mut brick_compare) in
+            for (brick_entity_compare, brick_transform_compare, brick_compare) in
                 query_brick_compare.iter_mut()
             {
                 if brick_compare.id == brick.id {
@@ -242,10 +228,31 @@ pub fn delete_touching(
         }
     }
 
-    // Unlock everything after remove
-    for (brick_entity, mut brick_transform, mut brick) in query_brick.iter_mut() {
+    for (brick_entity, brick_transform, mut brick) in query_brick.iter_mut() {
         if was_deleted == true {
-            brick.time_still = 0.;
+            // Unlock everything after remove
+            // brick.time_still = 0.;
+
+            if brick.game_lost == false {
+                for (span, mut points_text) in textquery.iter_mut() {
+                    points_text.points += 500;
+                }
+            }
+        }
+
+        // Display win message
+        if brick.game_lost == true && brick.set_game_lost_text == false {
+            commands.spawn((
+                Text::new("Sorry you lost!"),
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
+                    left: Val::Px((setupcamera::RES_WIDTH / 2) as f32),
+                    ..default()
+                },
+                setupcamera::PIXEL_PERFECT_LAYERS,
+            ));
+            brick.set_game_lost_text = true;
         }
     }
 }
@@ -257,14 +264,25 @@ pub fn spawn_brick(
     asset_server: Res<AssetServer>,
     mut query_brick: Query<(&mut Transform, &mut Brick)>,
     mut query: Query<&mut MousePos>,
+    mut textquery: Query<&mut PointsText>,
 ) {
     let mut mouse_x = 0.0;
     let mut mouse_y = 0.0;
     let mut clicked = false;
     let mut random_brick = 1;
-    let mut random_brick_gen = generate_random_int(1..5);
+
+    // Get difficulty
+    let mut current_difficulty = 2;
+    for points_text in textquery.iter_mut() {
+        //println!("current_difficulty: {}", current_difficulty);
+        current_difficulty = points_text.difficulty;
+       
+    }
+    let random_brick_gen = generate_random_int(1..current_difficulty);
+
+
     for mut mouse_pos in query.iter_mut() {
-        mouse_x = mouse_pos.x;
+        mouse_x = mouse_pos.x + (generate_random_int(-4..5)) as f32;
         mouse_y = mouse_pos.y;
         clicked = mouse_pos.clicked;
         random_brick = mouse_pos.next_random_brick;
@@ -276,11 +294,15 @@ pub fn spawn_brick(
         }
     }
     if clicked == true {
-        let mut brick_amount = 0;
+        let mut brick_next_id = 0;
 
-        for (mut brick_transform, mut brick) in query_brick.iter_mut() {
-            brick_amount += 1;
+        for (brick_transform, brick) in query_brick.iter_mut() {
+            if brick_next_id <= brick.id {
+                brick_next_id = brick.id + 1;
+            }
         }
+
+        //println!("brick_next_id: {}", brick_next_id);
 
         let random_brick_type = random_brick;
         let mut color_r = generate_random_int(0..100) as f32 / 100.0;
@@ -311,13 +333,19 @@ pub fn spawn_brick(
             color_b = 0.25;
         }
 
+        if random_brick_type == 5 {
+            color_r = 0.72;
+            color_g = 0.02;
+            color_b = 1.00;
+        }
+
         commands.spawn((
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(color_r, color_g, color_b))),
             Transform::from_translation(Vec3::new(mouse_x as f32, 100.0, 10.0))
                 .with_scale(Vec2::splat(BRICK_SIZE).extend(1.)),
             Brick {
-                id: brick_amount,
+                id: brick_next_id,
                 brick_type: random_brick_type,
                 vel_x: 0.0,
                 vel_y: 0.0,
@@ -326,6 +354,8 @@ pub fn spawn_brick(
                 time_still_move_x: 0.0,
                 time_still_move_y: 0.0,
                 to_delete: 0,
+                game_lost: false,
+                set_game_lost_text: false,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
@@ -333,16 +363,14 @@ pub fn spawn_brick(
         commands.spawn((
             Mesh2d(meshes.add(Circle::default())),
             MeshMaterial2d(materials.add(Color::srgb(0.0, 0.5, 0.5))),
-            Transform::from_translation(Vec3::new(mouse_x, 100., 50.0))
-                .with_scale(Vec2::splat(5.0).extend(1.)),
+            Transform::from_translation(Vec3::new(mouse_x, 100., 10.0))
+                .with_scale(Vec2::splat(5.0).extend(1.0)),
             BrickCompare {
-                id: brick_amount,
+                id: brick_next_id,
                 brick_type: random_brick_type,
                 size: BRICK_SIZE,
             },
             setupcamera::PIXEL_PERFECT_LAYERS,
         ));
-
-        clicked = false;
     }
 }

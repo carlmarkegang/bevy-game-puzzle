@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <style>
+        body {
+            background-color: #2b2c2f;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body style="margin: 0px;">
+    <script type="module">
+        import init from './mygame.js'
+
+        init().catch((error) => {
+            if (!error.message.startsWith("Using exceptions for control flow, don't mind me. This isn't actually an error!")) {
+                throw error;
+            }
+        });
+    </script>
+</body>
+
+</html>
